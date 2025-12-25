@@ -36,7 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) =
             <Sparkles className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="font-semibold text-foreground">NexaAI</h1>
+            <h1 className="font-semibold text-foreground">GEDUHub</h1>
             <p className="text-xs text-muted-foreground">
               {userProfile.isPremium ? (
                 <span className="flex items-center gap-1 text-primary">

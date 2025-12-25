@@ -53,7 +53,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       <div className="flex-1 space-y-2">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-foreground">
-            {isUser ? 'You' : 'NexaAI'}
+            {isUser ? 'You' : 'GEDUHub'}
           </span>
           <span className="text-xs text-muted-foreground">
             {message.timestamp.toLocaleTimeString([], {

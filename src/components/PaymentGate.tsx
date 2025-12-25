@@ -5,7 +5,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { toast } from 'sonner';
 
 export const PaymentGate: React.FC = () => {
-  const { setPremium, userProfile } = useChat();
+  const { setPremium } = useChat();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePayment = () => {
