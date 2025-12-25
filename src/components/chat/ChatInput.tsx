@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Send, Mic, MicOff, Paperclip, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
@@ -8,19 +8,19 @@ import { toast } from 'sonner';
 interface ChatInputProps {
   onSend: (content: string, attachments?: Attachment[]) => void;
   disabled?: boolean;
+  isLoading?: boolean;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled }) => {
+export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoading }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
   const { isRecording, setIsRecording } = useChat();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() && attachments.length === 0) return;
+    if (isLoading) return;
     
     onSend(input, attachments);
     setInput('');
@@ -41,7 +41,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled }) => {
     } else {
       setIsRecording(true);
       toast.success('Recording started - speak now');
-      // Simulate voice input after 3 seconds
       setTimeout(() => {
         setIsRecording(false);
         setInput(prev => prev + ' [Voice input transcribed here]');
@@ -107,19 +106,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled }) => {
           size="icon"
           className="shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary"
           onClick={() => fileInputRef.current?.click()}
-          disabled={disabled}
+          disabled={disabled || isLoading}
         >
           <Paperclip className="w-5 h-5" />
         </Button>
 
         <div className="flex-1 relative">
           <textarea
-            ref={textareaRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message NexaAI..."
-            disabled={disabled}
+            placeholder="Message GEDUHub..."
+            disabled={disabled || isLoading}
             rows={1}
             className="w-full resize-none bg-secondary border-0 rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[48px] max-h-[200px] scrollbar-thin"
             style={{
@@ -139,7 +137,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled }) => {
               : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
           }`}
           onClick={toggleRecording}
-          disabled={disabled}
+          disabled={disabled || isLoading}
         >
           {isRecording ? (
             <MicOff className="w-5 h-5" />
@@ -151,10 +149,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled }) => {
         <Button
           type="submit"
           size="icon"
-          disabled={disabled || (!input.trim() && attachments.length === 0)}
+          disabled={disabled || isLoading || (!input.trim() && attachments.length === 0)}
           className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground glow-primary transition-all duration-300"
         >
-          {isProcessing ? (
+          {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
             <Send className="w-5 h-5" />
