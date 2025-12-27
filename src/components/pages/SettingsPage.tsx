@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Crown, 
   Check, 
@@ -7,7 +7,8 @@ import {
   FileText, 
   Mic,
   Shield,
-  Loader2
+  Loader2,
+  Moon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
@@ -18,11 +19,26 @@ import { Label } from '@/components/ui/label';
 export const SettingsPage: React.FC = () => {
   const { userProfile, setPremium } = useChat();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return true;
+  });
   const [settings, setSettings] = useState({
     notifications: true,
     saveHistory: true,
     voiceEnabled: true,
   });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
 
   const handlePayment = () => {
     setIsProcessing(true);
@@ -159,6 +175,19 @@ export const SettingsPage: React.FC = () => {
         <div className="p-6 rounded-xl bg-secondary/30 border border-border">
           <h3 className="font-medium text-foreground mb-4">Preferences</h3>
           <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-foreground flex items-center gap-2">
+                  <Moon className="w-4 h-4" />
+                  Dark Mode
+                </Label>
+                <p className="text-xs text-muted-foreground">Toggle dark/light theme</p>
+              </div>
+              <Switch
+                checked={darkMode}
+                onCheckedChange={setDarkMode}
+              />
+            </div>
             {[
               { key: 'notifications', label: 'Enable notifications', desc: 'Get notified about updates' },
               { key: 'saveHistory', label: 'Save chat history', desc: 'Keep your conversations saved' },
