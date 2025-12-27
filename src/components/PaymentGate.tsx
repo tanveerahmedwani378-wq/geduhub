@@ -1,23 +1,128 @@
 import React, { useState } from 'react';
-import { Crown, Zap, MessageSquare, FileText, Mic, Shield, Loader2, Sparkles } from 'lucide-react';
+import { Crown, Zap, MessageSquare, FileText, Mic, Shield, Loader2, Sparkles, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useChat } from '@/contexts/ChatContext';
 import { toast } from 'sonner';
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 export const PaymentGate: React.FC = () => {
   const { setPremium } = useChat();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [email, setEmail] = useState('');
+  const [step, setStep] = useState<'email' | 'payment'>('email');
 
-  const handlePayment = () => {
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !email.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    setStep('payment');
+  };
+
+  const handlePayment = async () => {
     setIsProcessing(true);
-    toast.info('Connecting to Razorpay...');
-    
-    // Simulate payment process
-    setTimeout(() => {
-      setPremium(true);
+
+    try {
+      // Load Razorpay script
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Failed to load payment gateway');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Create order
+      const orderResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-razorpay-order`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      if (!orderResponse.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const orderData = await orderResponse.json();
+
+      // Open Razorpay checkout
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'GEDUHub',
+        description: 'Premium Subscription - ₹149/month',
+        order_id: orderData.orderId,
+        prefill: { email },
+        theme: { color: '#14b8a6' },
+        handler: async (response: any) => {
+          try {
+            // Verify payment
+            const verifyResponse = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/razorpay-webhook`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              }
+            );
+
+            if (verifyResponse.ok) {
+              setPremium(true);
+              localStorage.setItem('geduhub_premium_email', email);
+              toast.success('🎉 Payment successful! Welcome to Premium!');
+            } else {
+              toast.error('Payment verification failed. Please contact support.');
+            }
+          } catch (error) {
+            console.error('Verification error:', error);
+            toast.error('Payment verification failed');
+          }
+          setIsProcessing(false);
+        },
+        modal: {
+          ondismiss: () => {
+            setIsProcessing(false);
+            toast.info('Payment cancelled');
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error('Failed to initiate payment. Please try again.');
       setIsProcessing(false);
-      toast.success('🎉 Payment successful! Welcome to Premium!');
-    }, 2500);
+    }
   };
 
   const features = [
@@ -73,24 +178,45 @@ export const PaymentGate: React.FC = () => {
             ))}
           </div>
 
-          {/* CTA Button */}
-          <Button
-            onClick={handlePayment}
-            disabled={isProcessing}
-            className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground font-medium py-6 text-lg glow-primary transition-all duration-300"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Crown className="w-5 h-5 mr-2" />
-                Upgrade with Razorpay
-              </>
-            )}
-          </Button>
+          {step === 'email' ? (
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 py-6"
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground font-medium py-6 text-lg glow-primary transition-all duration-300"
+              >
+                Continue to Payment
+              </Button>
+            </form>
+          ) : (
+            <Button
+              onClick={handlePayment}
+              disabled={isProcessing}
+              className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground font-medium py-6 text-lg glow-primary transition-all duration-300"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Crown className="w-5 h-5 mr-2" />
+                  Pay ₹149 with Razorpay
+                </>
+              )}
+            </Button>
+          )}
 
           <p className="text-center text-xs text-muted-foreground mt-4">
             🔒 Secure payment • Cancel anytime • Instant activation
