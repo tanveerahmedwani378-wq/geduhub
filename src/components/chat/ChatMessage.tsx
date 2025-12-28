@@ -64,8 +64,39 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         </div>
 
         <div className="text-foreground/90 leading-relaxed whitespace-pre-wrap">
-          {message.content}
+          {message.content.replace(/!\[Generated Image\]\([^)]+\)/g, '')}
         </div>
+
+        {/* Display generated images */}
+        {message.images && message.images.length > 0 && (
+          <div className="flex flex-wrap gap-3 mt-3">
+            {message.images.map((imageUrl, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={imageUrl}
+                  alt={`Generated image ${index + 1}`}
+                  className="max-w-md rounded-lg border border-border shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+                  onClick={() => window.open(imageUrl, '_blank')}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const link = document.createElement('a');
+                    link.href = imageUrl;
+                    link.download = `generated-image-${index + 1}.png`;
+                    link.click();
+                    toast.success('Image downloaded');
+                  }}
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {message.attachments && message.attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
