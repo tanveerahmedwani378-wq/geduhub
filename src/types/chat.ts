@@ -4,6 +4,7 @@ export interface Message {
   content: string;
   timestamp: Date;
   attachments?: Attachment[];
+  images?: string[];
 }
 
 export interface Attachment {

@@ -61,6 +61,33 @@ export const ChatArea: React.FC = () => {
         throw new Error(errorData.error || 'Failed to get response');
       }
 
+      const contentType = response.headers.get('content-type');
+      
+      // Check if it's an image response (JSON, not streaming)
+      if (contentType?.includes('application/json')) {
+        const data = await response.json();
+        
+        if (data.type === 'image') {
+          // Handle image generation response
+          let messageContent = data.content || "Here's your generated image:";
+          
+          // Append images as markdown
+          if (data.images && data.images.length > 0) {
+            const imageMarkdown = data.images.map((url: string) => `\n\n![Generated Image](${url})`).join('');
+            messageContent += imageMarkdown;
+          }
+          
+          addMessage({
+            role: 'assistant',
+            content: messageContent,
+            images: data.images,
+          });
+          setStreamingContent('');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       if (!response.body) throw new Error('No response body');
 
       const reader = response.body.getReader();
