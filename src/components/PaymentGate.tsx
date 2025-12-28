@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Crown, Zap, MessageSquare, FileText, Mic, Shield, Loader2, Sparkles, Mail } from 'lucide-react';
+import { Crown, Zap, MessageSquare, FileText, Mic, Shield, Loader2, Sparkles, Mail, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChat } from '@/contexts/ChatContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 declare global {
@@ -11,7 +12,11 @@ declare global {
   }
 }
 
-export const PaymentGate: React.FC = () => {
+interface PaymentGateProps {
+  onClose?: () => void;
+}
+
+export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
   const { setPremium } = useChat();
   const [isProcessing, setIsProcessing] = useState(false);
   const [email, setEmail] = useState('');
@@ -52,21 +57,16 @@ export const PaymentGate: React.FC = () => {
         return;
       }
 
-      // Create order
-      const orderResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-razorpay-order`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        }
+      // Create order (via backend function)
+      const { data: orderData, error: orderError } = await supabase.functions.invoke(
+        'create-razorpay-order',
+        { body: { email } }
       );
 
-      if (!orderResponse.ok) {
-        throw new Error('Failed to create order');
+      if (orderError || !orderData?.orderId) {
+        console.error('Create order error:', orderError);
+        throw new Error(orderError?.message || 'Failed to create order');
       }
-
-      const orderData = await orderResponse.json();
 
       // Open Razorpay checkout
       const options = {
@@ -80,32 +80,29 @@ export const PaymentGate: React.FC = () => {
         theme: { color: '#14b8a6' },
         handler: async (response: any) => {
           try {
-            // Verify payment
-            const verifyResponse = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/razorpay-webhook`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                }),
-              }
-            );
+            const { error: verifyError } = await supabase.functions.invoke('razorpay-webhook', {
+              body: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              },
+            });
 
-            if (verifyResponse.ok) {
+            if (!verifyError) {
               setPremium(true);
               localStorage.setItem('geduhub_premium_email', email);
               toast.success('🎉 Payment successful! Welcome to Premium!');
+              onClose?.();
             } else {
+              console.error('Verify error:', verifyError);
               toast.error('Payment verification failed. Please contact support.');
             }
           } catch (error) {
             console.error('Verification error:', error);
             toast.error('Payment verification failed');
+          } finally {
+            setIsProcessing(false);
           }
-          setIsProcessing(false);
         },
         modal: {
           ondismiss: () => {
@@ -117,7 +114,6 @@ export const PaymentGate: React.FC = () => {
 
       const razorpay = new window.Razorpay(options);
       razorpay.open();
-
     } catch (error) {
       console.error('Payment error:', error);
       toast.error('Failed to initiate payment. Please try again.');
@@ -139,19 +135,28 @@ export const PaymentGate: React.FC = () => {
         {/* Background decoration */}
         <div className="absolute top-0 right-0 w-60 h-60 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-accent/10 rounded-full blur-2xl" />
-        
+
         <div className="relative">
+          {onClose && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute -top-2 -right-2"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-4 glow-primary animate-float">
               <Sparkles className="w-8 h-8 text-primary-foreground" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              You've reached your free limit
-            </h2>
-            <p className="text-muted-foreground">
-              Upgrade to Premium for unlimited access
-            </p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">You've reached your free limit</h2>
+            <p className="text-muted-foreground">Upgrade to Premium for unlimited access</p>
           </div>
 
           {/* Price */}
@@ -165,8 +170,8 @@ export const PaymentGate: React.FC = () => {
           {/* Features */}
           <div className="space-y-3 mb-8">
             {features.map((feature, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 className="flex items-center gap-3 animate-slide-in-left"
                 style={{ animationDelay: `${i * 0.1}s` }}
               >
@@ -218,11 +223,10 @@ export const PaymentGate: React.FC = () => {
             </Button>
           )}
 
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            🔒 Secure payment • Cancel anytime • Instant activation
-          </p>
+          <p className="text-center text-xs text-muted-foreground mt-4">🔒 Secure payment • Cancel anytime • Instant activation</p>
         </div>
       </div>
     </div>
   );
 };
+

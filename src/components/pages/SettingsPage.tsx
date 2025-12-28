@@ -1,24 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Crown, 
-  Check, 
-  Zap, 
-  MessageSquare, 
-  FileText, 
+import {
+  Crown,
+  Check,
+  Zap,
+  MessageSquare,
+  FileText,
   Mic,
   Shield,
-  Loader2,
-  Moon
+  Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
-import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { PaymentGate } from '@/components/PaymentGate';
 
 export const SettingsPage: React.FC = () => {
-  const { userProfile, setPremium } = useChat();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { userProfile } = useChat();
+  const [showPaymentGate, setShowPaymentGate] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark');
@@ -40,19 +39,9 @@ export const SettingsPage: React.FC = () => {
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
-  const handlePayment = () => {
-    setIsProcessing(true);
-    
-    // Simulate Razorpay payment
-    toast.info('Connecting to Razorpay...');
-    
-    setTimeout(() => {
-      // Simulate successful payment
-      setPremium(true);
-      setIsProcessing(false);
-      toast.success('🎉 Payment successful! Welcome to Premium!');
-    }, 2000);
-  };
+  useEffect(() => {
+    if (userProfile.isPremium) setShowPaymentGate(false);
+  }, [userProfile.isPremium]);
 
   const features = [
     { icon: MessageSquare, text: 'Unlimited messages' },
@@ -73,7 +62,7 @@ export const SettingsPage: React.FC = () => {
         {/* Subscription Card */}
         <div className="mb-8 p-6 rounded-2xl bg-gradient-to-br from-primary/10 via-accent/5 to-transparent border border-primary/20 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
-          
+
           <div className="relative">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary">
@@ -84,9 +73,7 @@ export const SettingsPage: React.FC = () => {
                   {userProfile.isPremium ? 'Premium Active' : 'Upgrade to Premium'}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {userProfile.isPremium 
-                    ? 'You have access to all features' 
-                    : 'Unlock unlimited features'}
+                  {userProfile.isPremium ? 'You have access to all features' : 'Unlock unlimited features'}
                 </p>
               </div>
             </div>
@@ -110,21 +97,11 @@ export const SettingsPage: React.FC = () => {
                 </div>
 
                 <Button
-                  onClick={handlePayment}
-                  disabled={isProcessing}
+                  onClick={() => setShowPaymentGate(true)}
                   className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground font-medium py-6 glow-primary"
                 >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing Payment...
-                    </>
-                  ) : (
-                    <>
-                      <Crown className="w-4 h-4 mr-2" />
-                      Pay with Razorpay
-                    </>
-                  )}
+                  <Crown className="w-4 h-4 mr-2" />
+                  Pay with Razorpay
                 </Button>
 
                 <p className="text-center text-xs text-muted-foreground mt-3">
@@ -152,17 +129,17 @@ export const SettingsPage: React.FC = () => {
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-muted-foreground">Messages Used</span>
                 <span className="text-foreground">
-                  {userProfile.isPremium 
-                    ? 'Unlimited' 
+                  {userProfile.isPremium
+                    ? 'Unlimited'
                     : `${userProfile.messagesUsed} / ${userProfile.maxFreeMessages}`}
                 </span>
               </div>
               {!userProfile.isPremium && (
                 <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500"
-                    style={{ 
-                      width: `${Math.min((userProfile.messagesUsed / userProfile.maxFreeMessages) * 100, 100)}%` 
+                    style={{
+                      width: `${Math.min((userProfile.messagesUsed / userProfile.maxFreeMessages) * 100, 100)}%`,
                     }}
                   />
                 </div>
@@ -183,10 +160,7 @@ export const SettingsPage: React.FC = () => {
                 </Label>
                 <p className="text-xs text-muted-foreground">Toggle dark/light theme</p>
               </div>
-              <Switch
-                checked={darkMode}
-                onCheckedChange={setDarkMode}
-              />
+              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
             </div>
             {[
               { key: 'notifications', label: 'Enable notifications', desc: 'Get notified about updates' },
@@ -200,8 +174,8 @@ export const SettingsPage: React.FC = () => {
                 </div>
                 <Switch
                   checked={settings[pref.key as keyof typeof settings]}
-                  onCheckedChange={(checked) => 
-                    setSettings(prev => ({ ...prev, [pref.key]: checked }))
+                  onCheckedChange={(checked) =>
+                    setSettings((prev) => ({ ...prev, [pref.key]: checked }))
                   }
                 />
               </div>
@@ -209,6 +183,9 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {showPaymentGate && <PaymentGate onClose={() => setShowPaymentGate(false)} />}
     </div>
   );
 };
+
