@@ -6,6 +6,54 @@
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 174 72% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 174 72% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 174 72% 40%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 220 14% 96%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 174 72% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 92%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 174 72% 40%;
+
+    /* Custom tokens */
+    --ai-gradient: linear-gradient(135deg, hsl(174 72% 40%), hsl(199 89% 48%));
+    --user-bubble: 220 14% 96%;
+    --ai-bubble: 220 14% 92%;
+    --glow-primary: 0 0 40px hsl(174 72% 40% / 0.2);
+    --glow-accent: 0 0 60px hsl(199 89% 48% / 0.15);
+  }
+
+  .dark {
     --background: 222 47% 6%;
     --foreground: 210 40% 98%;
 
@@ -34,8 +82,6 @@
     --input: 222 30% 14%;
     --ring: 174 72% 56%;
 
-    --radius: 0.75rem;
-
     --sidebar-background: 222 47% 5%;
     --sidebar-foreground: 210 40% 85%;
     --sidebar-primary: 174 72% 56%;
@@ -51,11 +97,6 @@
     --ai-bubble: 222 30% 10%;
     --glow-primary: 0 0 40px hsl(174 72% 56% / 0.3);
     --glow-accent: 0 0 60px hsl(199 89% 48% / 0.2);
-  }
-
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
   }
 }
 
