@@ -1,12 +1,12 @@
 import React from 'react';
-import { 
-  Plus, 
-  MessageSquare, 
-  Library, 
-  Settings, 
+import {
+  Plus,
+  MessageSquare,
+  Library,
+  Settings,
   Trash2,
   Sparkles,
-  Crown
+  Crown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
@@ -18,13 +18,13 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
-  const { 
-    conversations, 
-    currentConversation, 
-    createConversation, 
+  const {
+    conversations,
+    currentConversation,
+    createConversation,
     selectConversation,
     deleteConversation,
-    userProfile 
+    userProfile,
   } = useChat();
 
   return (
@@ -43,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) =
                   <Crown className="w-3 h-3" /> Premium
                 </span>
               ) : (
-                `${userProfile.maxFreeMessages - userProfile.messagesUsed} free messages left`
+                <span>Free plan</span>
               )}
             </p>
           </div>
@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) =
       {/* Conversations */}
       <ScrollArea className="flex-1 p-2">
         <div className="space-y-1">
-          {conversations.map(conv => (
+          {conversations.map((conv) => (
             <div
               key={conv.id}
               className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 ${
@@ -107,6 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) =
                   deleteConversation(conv.id);
                 }}
                 className="opacity-0 group-hover:opacity-100 p-1 hover:text-destructive transition-all"
+                aria-label="Delete conversation"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -156,3 +157,4 @@ const NavButton: React.FC<{
     {label}
   </button>
 );
+
