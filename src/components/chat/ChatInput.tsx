@@ -5,6 +5,10 @@ import { useChat } from '@/contexts/ChatContext';
 import { Attachment } from '@/types/chat';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Set up PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface ChatInputProps {
   onSend: (content: string, attachments?: Attachment[]) => void;
@@ -159,6 +163,28 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
     });
   };
 
+  const extractPdfText = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const textParts: string[] = [];
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        textParts.push(`[Page ${i}]\n${pageText}`);
+      }
+      
+      return textParts.join('\n\n');
+    } catch (error) {
+      console.error('PDF extraction error:', error);
+      return '[Failed to extract PDF text]';
+    }
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -184,8 +210,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
         } catch (error) {
           console.error('Failed to read file:', error);
         }
-      } else if (file.type === 'application/pdf') {
-        newContents.set(id, '[PDF content - parsing not available in browser]');
+      } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        toast.info(`Extracting text from ${file.name}...`);
+        const pdfText = await extractPdfText(file);
+        newContents.set(id, pdfText);
+        toast.success(`Extracted text from ${file.name}`);
       } else if (file.type.startsWith('image/')) {
         // Convert image to base64 for AI analysis
         const reader = new FileReader();
