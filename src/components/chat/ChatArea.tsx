@@ -154,36 +154,34 @@ export const ChatArea: React.FC = () => {
     timestamp: new Date(),
   } : null;
 
-  if (!currentConversation) {
+  if (!currentConversation || displayMessages.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-6 glow-primary animate-float">
-          <Sparkles className="w-10 h-10 text-primary-foreground" />
+      <div className="flex-1 flex flex-col h-full">
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <h1 className="text-4xl font-semibold text-foreground mb-12">
+            What can I help with?
+          </h1>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mb-8">
+            {[
+              { icon: '🖼️', title: 'Create image', desc: 'Generate AI images' },
+              { icon: '💭', title: 'Thinking', desc: 'Deep reasoning mode' },
+              { icon: '🔍', title: 'Research', desc: 'Find information' },
+              { icon: '📝', title: 'Write', desc: 'Essays, emails, stories' },
+            ].map((item, i) => (
+              <div
+                key={i}
+                className="p-4 rounded-xl bg-secondary/50 border border-border hover:border-primary/50 transition-all duration-300 cursor-pointer group text-center"
+              >
+                <div className="text-3xl mb-2">{item.icon}</div>
+                <h3 className="font-medium text-foreground group-hover:text-primary transition-colors text-sm">
+                  {item.title}
+                </h3>
+                <p className="text-xs text-muted-foreground">{item.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
-        <h1 className="text-3xl font-semibold text-foreground mb-2">
-          Welcome to <span className="gradient-text">GEDUHub</span>
-        </h1>
-        <p className="text-muted-foreground text-center max-w-md mb-8">
-          Your intelligent AI assistant. Ask questions, upload documents, or use voice input to get started.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
-          {[
-            { icon: '💬', title: 'Ask Anything', desc: 'Get instant answers to your questions' },
-            { icon: '📄', title: 'Upload Files', desc: 'Analyze documents and images' },
-            { icon: '🎤', title: 'Voice Input', desc: 'Speak naturally, get responses' },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className="p-4 rounded-xl bg-secondary/50 border border-border hover:border-primary/50 transition-all duration-300 cursor-pointer group"
-            >
-              <div className="text-2xl mb-2">{item.icon}</div>
-              <h3 className="font-medium text-foreground group-hover:text-primary transition-colors">
-                {item.title}
-              </h3>
-              <p className="text-sm text-muted-foreground">{item.desc}</p>
-            </div>
-          ))}
-        </div>
+        <ChatInput onSend={handleSend} disabled={needsPremium} isLoading={isLoading} />
       </div>
     );
   }

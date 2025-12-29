@@ -1,11 +1,18 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff, Paperclip, X, Loader2 } from 'lucide-react';
+import { Send, Mic, MicOff, Plus, X, Loader2, Image, FileText, Brain, Search, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { Attachment } from '@/types/chat';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -250,6 +257,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
     };
   }, []);
 
+  const [showMenu, setShowMenu] = useState(false);
+
+  const handleFeatureClick = (feature: string) => {
+    switch (feature) {
+      case 'image':
+        setInput('Generate an image of ');
+        break;
+      case 'thinking':
+        setInput('[Thinking mode] ');
+        toast.info('Deep thinking mode enabled');
+        break;
+      case 'research':
+        setInput('Research and explain ');
+        break;
+      default:
+        break;
+    }
+    setShowMenu(false);
+  };
+
   return (
     <div className="border-t border-border bg-background/80 backdrop-blur-sm p-4">
       {attachments.length > 0 && (
@@ -281,16 +308,43 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
           className="hidden"
         />
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || isLoading}
-        >
-          <Paperclip className="w-5 h-5" />
-        </Button>
+        <DropdownMenu open={showMenu} onOpenChange={setShowMenu}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary"
+              disabled={disabled || isLoading}
+            >
+              <Plus className="w-5 h-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+              <FileText className="w-4 h-4 mr-2" />
+              Add photos & files
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => handleFeatureClick('image')}>
+              <Image className="w-4 h-4 mr-2" />
+              Create image
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleFeatureClick('thinking')}>
+              <Brain className="w-4 h-4 mr-2" />
+              Thinking
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleFeatureClick('research')}>
+              <Search className="w-4 h-4 mr-2" />
+              Deep research
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem disabled>
+              <MoreHorizontal className="w-4 h-4 mr-2" />
+              More coming soon...
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <div className="flex-1 relative">
           <textarea
