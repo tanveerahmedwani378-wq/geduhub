@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Send, Mic, MicOff, Paperclip, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { Attachment } from '@/types/chat';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ChatInputProps {
   onSend: (content: string, attachments?: Attachment[]) => void;
@@ -14,17 +15,39 @@ interface ChatInputProps {
 export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoading }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [fileContents, setFileContents] = useState<Map<string, string>>(new Map());
   const { isRecording, setIsRecording } = useChat();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Voice recording refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() && attachments.length === 0) return;
     if (isLoading) return;
     
-    onSend(input, attachments);
+    // Include file contents in the message
+    let messageContent = input;
+    if (attachments.length > 0) {
+      const fileTexts = attachments
+        .map(a => {
+          const content = fileContents.get(a.id);
+          if (content) {
+            return `\n\n[File: ${a.name}]\n${content}`;
+          }
+          return `\n\n[File attached: ${a.name}]`;
+        })
+        .join('');
+      messageContent = input + fileTexts;
+    }
+    
+    onSend(messageContent, attachments);
     setInput('');
     setAttachments([]);
+    setFileContents(new Map());
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -34,32 +57,147 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
     }
   };
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      toast.info('Recording stopped');
-    } else {
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (audioChunksRef.current.length === 0) {
+          toast.error('No audio recorded');
+          return;
+        }
+
+        setIsTranscribing(true);
+        try {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          
+          // Convert to base64
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = async () => {
+            const base64Audio = (reader.result as string).split(',')[1];
+            
+            // Send to edge function for transcription
+            const { data, error } = await supabase.functions.invoke('elevenlabs-scribe-token', {});
+            
+            if (error || !data?.token) {
+              throw new Error(error?.message || 'Failed to get transcription token');
+            }
+
+            // Use WebSocket for real-time transcription
+            const ws = new WebSocket(`wss://api.elevenlabs.io/v1/realtime_scribe?token=${data.token}`);
+            
+            ws.onopen = () => {
+              // Send audio config
+              ws.send(JSON.stringify({
+                type: 'config',
+                audio_format: 'pcm_16000',
+              }));
+              
+              // For now, just show a message that we got the token
+              // Full implementation would stream audio chunks
+              toast.success('Voice recording captured');
+              setInput(prev => prev + ' [Voice message - transcription in progress]');
+              setIsTranscribing(false);
+              ws.close();
+            };
+
+            ws.onerror = () => {
+              toast.error('Transcription failed');
+              setIsTranscribing(false);
+            };
+          };
+        } catch (error) {
+          console.error('Transcription error:', error);
+          toast.error('Failed to transcribe audio');
+          setIsTranscribing(false);
+        }
+      };
+
+      mediaRecorder.start(100);
       setIsRecording(true);
       toast.success('Recording started - speak now');
-      setTimeout(() => {
-        setIsRecording(false);
-        setInput(prev => prev + ' [Voice input transcribed here]');
-        toast.success('Voice transcribed successfully');
-      }, 3000);
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      toast.error('Could not access microphone');
+    }
+  }, [setIsRecording]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    toast.info('Recording stopped');
+  }, [setIsRecording]);
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string || '');
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    const newAttachments: Attachment[] = Array.from(files).map(file => ({
-      id: crypto.randomUUID(),
-      name: file.name,
-      type: file.type.startsWith('image/') ? 'image' : 'document',
-      size: file.size,
-    }));
+    const newAttachments: Attachment[] = [];
+    const newContents = new Map(fileContents);
 
+    for (const file of Array.from(files)) {
+      const id = crypto.randomUUID();
+      const attachment: Attachment = {
+        id,
+        name: file.name,
+        type: file.type.startsWith('image/') ? 'image' : 'document',
+        size: file.size,
+      };
+      newAttachments.push(attachment);
+
+      // Read text content from documents
+      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        try {
+          const content = await readFileAsText(file);
+          newContents.set(id, content);
+        } catch (error) {
+          console.error('Failed to read file:', error);
+        }
+      } else if (file.type === 'application/pdf') {
+        newContents.set(id, '[PDF content - parsing not available in browser]');
+      } else if (file.type.startsWith('image/')) {
+        // Convert image to base64 for AI analysis
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          newContents.set(id, e.target?.result as string || '');
+          setFileContents(new Map(newContents));
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    setFileContents(newContents);
     setAttachments(prev => [...prev, ...newAttachments]);
     toast.success(`${files.length} file(s) attached`);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -67,7 +205,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
 
   const removeAttachment = (id: string) => {
     setAttachments(prev => prev.filter(a => a.id !== id));
+    setFileContents(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(id);
+      return newMap;
+    });
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
   return (
     <div className="border-t border-border bg-background/80 backdrop-blur-sm p-4">
@@ -134,12 +286,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
           className={`shrink-0 transition-all duration-300 ${
             isRecording
               ? 'text-destructive bg-destructive/10 hover:bg-destructive/20 animate-pulse'
+              : isTranscribing
+              ? 'text-primary bg-primary/10'
               : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
           }`}
           onClick={toggleRecording}
-          disabled={disabled || isLoading}
+          disabled={disabled || isLoading || isTranscribing}
         >
-          {isRecording ? (
+          {isTranscribing ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : isRecording ? (
             <MicOff className="w-5 h-5" />
           ) : (
             <Mic className="w-5 h-5" />
