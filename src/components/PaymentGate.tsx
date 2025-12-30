@@ -75,7 +75,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
         amount: orderData.amount,
         currency: orderData.currency,
         name: 'GEDUHub',
-        description: 'Premium Subscription - ₹149/month',
+        description: 'Premium Subscription - ₹149/6 months',
         order_id: orderData.orderId,
         prefill: { email },
         theme: { color: '#14b8a6' },
@@ -151,7 +151,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
           <div className="text-center mb-6">
             <div className="inline-flex items-baseline gap-1">
               <span className="text-5xl font-bold gradient-text">₹149</span>
-              <span className="text-muted-foreground">/month</span>
+              <span className="text-muted-foreground">/6 months</span>
             </div>
           </div>
 
