@@ -5,6 +5,7 @@ import { ChatInput } from './ChatInput';
 import { useChat } from '@/contexts/ChatContext';
 import { Attachment, Message } from '@/types/chat';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
@@ -38,26 +39,41 @@ export const ChatArea: React.FC = () => {
     setStreamingContent('');
 
     try {
-      // Prepare messages for API
+      // Prepare messages for API - validate before sending
       const messages = [
         ...(currentConversation?.messages || []).map(m => ({
           role: m.role,
-          content: m.content,
+          content: m.content.slice(0, 8000), // Enforce client-side limit
         })),
-        { role: 'user', content },
-      ];
+        { role: 'user', content: content.slice(0, 8000) },
+      ].slice(-50); // Limit message history
+
+      // Get current session for auth
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
       const response = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ messages }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Handle specific error codes
+        if (response.status === 402) {
+          toast.error('Free message limit reached. Please upgrade to premium for unlimited access.');
+          return;
+        }
+        if (response.status === 429) {
+          toast.error('Rate limit reached. Please wait a moment before trying again.');
+          return;
+        }
+        
         throw new Error(errorData.error || 'Failed to get response');
       }
 
