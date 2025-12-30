@@ -6,6 +6,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { Attachment, Message } from '@/types/chat';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import geduhubChatLogo from '@/assets/geduhub-chat-logo.png';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
@@ -175,9 +176,7 @@ export const ChatArea: React.FC = () => {
       <div className="flex-1 flex flex-col h-full bg-gradient-to-b from-background via-background to-secondary/20">
         <div className="flex-1 flex flex-col items-center justify-center p-8">
           <div className="mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-accent flex items-center justify-center shadow-lg shadow-primary/25">
-              <Sparkles className="w-8 h-8 text-primary-foreground" />
-            </div>
+            <img src={geduhubChatLogo} alt="GEDUHub" className="w-24 h-24 rounded-2xl shadow-lg shadow-primary/25" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent mb-4">
             What can I help with?
