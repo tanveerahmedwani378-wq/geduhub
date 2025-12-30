@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Crown, Zap, MessageSquare, FileText, Mic, Shield, Loader2, Mail } from 'lucide-react';
+import { Crown, Zap, MessageSquare, FileText, Mic, Clock, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChat } from '@/contexts/ChatContext';
@@ -127,7 +127,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
     { icon: FileText, text: 'Upload unlimited documents' },
     { icon: Mic, text: 'Voice input with Whisper' },
     { icon: Zap, text: '10x faster responses' },
-    { icon: Shield, text: '24/7 priority support' },
+    { icon: Clock, text: '24/7 priority support' },
   ];
 
   return (
