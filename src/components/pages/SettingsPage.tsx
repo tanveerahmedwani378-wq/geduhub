@@ -8,12 +8,14 @@ import {
   Mic,
   Shield,
   Moon,
+  LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { PaymentGate } from '@/components/PaymentGate';
+import { toast } from 'sonner';
 
 export const SettingsPage: React.FC = () => {
   const { userProfile } = useChat();
@@ -181,6 +183,27 @@ export const SettingsPage: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Logout / Reset Subscription */}
+        <div className="mt-8 p-6 rounded-xl bg-destructive/10 border border-destructive/20">
+          <h3 className="font-medium text-foreground mb-2">Account</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Clear your subscription data to test the payment flow again.
+          </p>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              localStorage.removeItem('geduhub_premium_email');
+              toast.success('Subscription cleared. Refresh the page to see the payment screen.');
+              setTimeout(() => {
+                window.location.reload();
+              }, 1500);
+            }}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Clear Subscription & Logout
+          </Button>
         </div>
       </div>
 

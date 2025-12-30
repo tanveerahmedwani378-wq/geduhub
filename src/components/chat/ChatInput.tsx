@@ -398,6 +398,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
           )}
         </Button>
       </form>
+      
+      {/* Disclaimer */}
+      <p className="text-center text-xs text-muted-foreground mt-2">
+        GEDUHub can make mistakes. Check important info.
+      </p>
     </div>
   );
 };
