@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Crown, Zap, MessageSquare, FileText, Mic, Shield, Loader2, Sparkles, Mail, X } from 'lucide-react';
+import { Crown, Zap, MessageSquare, FileText, Mic, Shield, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChat } from '@/contexts/ChatContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import geduhubLogo from '@/assets/geduhub-logo.png';
 
 declare global {
   interface Window {
@@ -141,9 +142,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
 
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-4 glow-primary animate-float">
-              <Sparkles className="w-8 h-8 text-primary-foreground" />
-            </div>
+            <img src={geduhubLogo} alt="GEDUHub" className="w-20 h-20 rounded-2xl mx-auto mb-4 glow-primary animate-float" />
             <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to GEDUHub AI</h2>
             <p className="text-muted-foreground">Subscribe to unlock unlimited AI access</p>
           </div>
