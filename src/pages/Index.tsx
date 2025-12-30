@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { ChatArea } from '@/components/chat/ChatArea';
@@ -7,19 +7,70 @@ import { SettingsPage } from '@/components/pages/SettingsPage';
 import { PaymentGate } from '@/components/PaymentGate';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings'>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { userProfile, selectConversation } = useChat();
+  const [isPaid, setIsPaid] = useState<boolean | null>(null); // null = loading
+  const { selectConversation, setPremium } = useChat();
 
-  const showPaymentGate = !userProfile.isPremium && 
-    userProfile.messagesUsed >= userProfile.maxFreeMessages;
+  // Check if user has paid on mount
+  useEffect(() => {
+    const checkPaymentStatus = async () => {
+      // First check localStorage for saved email
+      const savedEmail = localStorage.getItem('geduhub_premium_email');
+      
+      if (savedEmail) {
+        // Verify subscription is still active
+        try {
+          const { data, error } = await supabase.functions.invoke('check-subscription', {
+            body: { email: savedEmail }
+          });
+          
+          if (!error && data?.isPremium) {
+            setIsPaid(true);
+            setPremium(true);
+            return;
+          }
+        } catch (e) {
+          console.error('Error checking subscription:', e);
+        }
+      }
+      
+      // Not paid
+      setIsPaid(false);
+    };
+
+    checkPaymentStatus();
+  }, [setPremium]);
+
+  const handlePaymentSuccess = () => {
+    setIsPaid(true);
+    setPremium(true);
+  };
 
   const handleSelectConversation = (id: string) => {
     selectConversation(id);
     setCurrentPage('chat');
   };
+
+  // Show loading state while checking payment
+  if (isPaid === null) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show payment gate if not paid
+  if (!isPaid) {
+    return <PaymentGate onClose={handlePaymentSuccess} />;
+  }
 
   return (
     <div className="h-screen flex bg-background overflow-hidden">
@@ -58,9 +109,6 @@ const AppContent: React.FC = () => {
         )}
         {currentPage === 'settings' && <SettingsPage />}
       </main>
-
-      {/* Payment Gate */}
-      {showPaymentGate && <PaymentGate />}
     </div>
   );
 };
