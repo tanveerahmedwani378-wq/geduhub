@@ -21,9 +21,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    isPremium: false,
+    isPremium: true, // No free message limit - all users have full access
     messagesUsed: 0,
-    maxFreeMessages: 5,
+    maxFreeMessages: 999999, // Effectively unlimited
   });
 
   const createConversation = () => {
