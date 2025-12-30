@@ -137,26 +137,15 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-accent/10 rounded-full blur-2xl" />
 
         <div className="relative">
-          {onClose && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute -top-2 -right-2"
-              onClick={onClose}
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
+          {/* No close button - payment is required */}
 
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-4 glow-primary animate-float">
               <Sparkles className="w-8 h-8 text-primary-foreground" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">You've reached your free limit</h2>
-            <p className="text-muted-foreground">Upgrade to Premium for unlimited access</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to GEDUHub AI</h2>
+            <p className="text-muted-foreground">Subscribe to unlock unlimited AI access</p>
           </div>
 
           {/* Price */}
