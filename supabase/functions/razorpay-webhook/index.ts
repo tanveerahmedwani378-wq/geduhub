@@ -79,8 +79,9 @@ serve(async (req) => {
       }
 
       // Update subscription status
+      // Set expiration to 6 months from now
       const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + 1);
+      expiresAt.setMonth(expiresAt.getMonth() + 6);
 
       const { error: updateError } = await supabase
         .from('subscriptions')
@@ -118,8 +119,9 @@ serve(async (req) => {
         const orderId = paymentEntity.order_id;
         const paymentId = paymentEntity.id;
 
+        // Set expiration to 6 months from now
         const expiresAt = new Date();
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
+        expiresAt.setMonth(expiresAt.getMonth() + 6);
 
         await supabase
           .from('subscriptions')
