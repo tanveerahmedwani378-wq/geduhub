@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import geduhubLogo from '@/assets/geduhub-logo.png';
+import geduhubLogo from '@/assets/geduhub-chat-logo.png';
 
 interface SidebarProps {
   currentPage: 'chat' | 'library' | 'settings';
