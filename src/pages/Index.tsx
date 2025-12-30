@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { ChatArea } from '@/components/chat/ChatArea';
@@ -14,9 +14,13 @@ const AppContent: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isPaid, setIsPaid] = useState<boolean | null>(null); // null = loading
   const { selectConversation, setPremium } = useChat();
+  const hasCheckedPayment = useRef(false);
 
-  // Check if user has paid on mount
+  // Check if user has paid on mount - only once
   useEffect(() => {
+    if (hasCheckedPayment.current) return;
+    hasCheckedPayment.current = true;
+
     const checkPaymentStatus = async () => {
       // First check localStorage for saved email
       const savedEmail = localStorage.getItem('geduhub_premium_email');
