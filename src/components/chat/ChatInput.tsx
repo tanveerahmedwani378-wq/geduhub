@@ -401,7 +401,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
       
       {/* Disclaimer */}
       <p className="text-center text-xs text-muted-foreground mt-2">
-        GEDUHub can make mistakes. Check important info.
+        GEDUHub can make mistakes. Check important info. 
+        <a href="/privacy" className="underline hover:text-foreground ml-1">Privacy Policy</a>
+        {' · '}
+        <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>
       </p>
     </div>
   );
