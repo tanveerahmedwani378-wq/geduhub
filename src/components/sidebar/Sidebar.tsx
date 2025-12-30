@@ -5,12 +5,12 @@ import {
   Library,
   Settings,
   Trash2,
-  Sparkles,
   Crown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import geduhubLogo from '@/assets/geduhub-logo.png';
 
 interface SidebarProps {
   currentPage: 'chat' | 'library' | 'settings';
@@ -32,9 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) =
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary">
-            <Sparkles className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <img src={geduhubLogo} alt="GEDUHub" className="w-10 h-10 rounded-xl" />
           <div>
             <h1 className="font-semibold text-foreground">GEDUHub</h1>
             <p className="text-xs text-muted-foreground">
