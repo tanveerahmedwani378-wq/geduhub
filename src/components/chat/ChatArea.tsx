@@ -172,27 +172,35 @@ export const ChatArea: React.FC = () => {
 
   if (!currentConversation || displayMessages.length === 0) {
     return (
-      <div className="flex-1 flex flex-col h-full">
+      <div className="flex-1 flex flex-col h-full bg-gradient-to-b from-background via-background to-secondary/20">
         <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <h1 className="text-4xl font-semibold text-foreground mb-12">
+          <div className="mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-accent flex items-center justify-center shadow-lg shadow-primary/25">
+              <Sparkles className="w-8 h-8 text-primary-foreground" />
+            </div>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent mb-4">
             What can I help with?
           </h1>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mb-8">
+          <p className="text-muted-foreground text-lg mb-12 max-w-md text-center">
+            Ask me anything — from writing and research to creating images and deep thinking.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mb-8">
             {[
-              { icon: '🖼️', title: 'Create image', desc: 'Generate AI images' },
-              { icon: '💭', title: 'Thinking', desc: 'Deep reasoning mode' },
-              { icon: '🔍', title: 'Research', desc: 'Find information' },
-              { icon: '📝', title: 'Write', desc: 'Essays, emails, stories' },
+              { icon: '🎨', title: 'Create image', desc: 'Generate AI art', gradient: 'from-pink-500/20 to-rose-500/20', border: 'hover:border-pink-400/50' },
+              { icon: '🧠', title: 'Thinking', desc: 'Deep reasoning', gradient: 'from-purple-500/20 to-violet-500/20', border: 'hover:border-purple-400/50' },
+              { icon: '🔎', title: 'Research', desc: 'Find insights', gradient: 'from-blue-500/20 to-cyan-500/20', border: 'hover:border-blue-400/50' },
+              { icon: '✍️', title: 'Write', desc: 'Essays & stories', gradient: 'from-emerald-500/20 to-teal-500/20', border: 'hover:border-emerald-400/50' },
             ].map((item, i) => (
               <div
                 key={i}
-                className="p-4 rounded-xl bg-secondary/50 border border-border hover:border-primary/50 transition-all duration-300 cursor-pointer group text-center"
+                className={`p-5 rounded-2xl bg-gradient-to-br ${item.gradient} backdrop-blur-sm border border-border/50 ${item.border} transition-all duration-300 cursor-pointer group text-center hover:scale-105 hover:shadow-lg`}
               >
-                <div className="text-3xl mb-2">{item.icon}</div>
-                <h3 className="font-medium text-foreground group-hover:text-primary transition-colors text-sm">
+                <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">{item.icon}</div>
+                <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
                   {item.title}
                 </h3>
-                <p className="text-xs text-muted-foreground">{item.desc}</p>
+                <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
               </div>
             ))}
           </div>
