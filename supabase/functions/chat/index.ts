@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,18 +21,194 @@ function isImageRequest(message: string): boolean {
   return imageKeywords.some(keyword => lowerMessage.includes(keyword));
 }
 
+// Input validation
+interface ValidatedMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+function validateMessages(messages: unknown): ValidatedMessage[] {
+  if (!Array.isArray(messages)) {
+    throw new Error('Messages must be an array');
+  }
+
+  if (messages.length === 0) {
+    throw new Error('Messages array cannot be empty');
+  }
+
+  if (messages.length > 50) {
+    throw new Error('Too many messages in history (max 50)');
+  }
+
+  return messages.map((msg, idx) => {
+    if (!msg || typeof msg !== 'object') {
+      throw new Error(`Invalid message at index ${idx}`);
+    }
+
+    const m = msg as Record<string, unknown>;
+
+    // Validate role - only allow user and assistant (not system)
+    if (!['user', 'assistant'].includes(m.role as string)) {
+      throw new Error(`Invalid role at index ${idx}`);
+    }
+
+    // Validate content
+    if (typeof m.content !== 'string') {
+      throw new Error(`Invalid content at index ${idx}`);
+    }
+
+    // Length limit per message (8000 chars max)
+    if ((m.content as string).length > 8000) {
+      throw new Error(`Message too long at index ${idx} (max 8000 characters)`);
+    }
+
+    // Sanitize content - remove null bytes and control characters
+    const sanitized = (m.content as string)
+      .replace(/\0/g, '')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+
+    return {
+      role: m.role as 'user' | 'assistant',
+      content: sanitized,
+    };
+  });
+}
+
+// Check subscription status
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function checkPremiumStatus(supabase: any, email: string | null): Promise<boolean> {
+  if (!email) return false;
+
+  const { data } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('email', email)
+    .eq('status', 'active')
+    .gte('expires_at', new Date().toISOString())
+    .limit(1)
+    .maybeSingle();
+
+  return !!data;
+}
+
+// Simple in-memory rate limiting (per function invocation - resets on cold start)
+const FREE_MESSAGES_LIMIT = 5;
+const freeUserMessageCounts = new Map<string, { count: number; resetTime: number }>();
+
+function checkFreeUserRateLimit(email: string): boolean {
+  const now = Date.now();
+  const record = freeUserMessageCounts.get(email);
+  
+  // Reset after 24 hours
+  const RESET_INTERVAL = 24 * 60 * 60 * 1000;
+  
+  if (!record || now > record.resetTime) {
+    freeUserMessageCounts.set(email, { count: 1, resetTime: now + RESET_INTERVAL });
+    return true;
+  }
+  
+  if (record.count >= FREE_MESSAGES_LIMIT) {
+    return false;
+  }
+  
+  record.count++;
+  return true;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages } = await req.json();
+    // Validate and parse request body
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { messages: rawMessages } = body as { messages: unknown };
+
+    // Validate messages
+    let messages: ValidatedMessage[];
+    try {
+      messages = validateMessages(rawMessages);
+    } catch (validationError) {
+      console.error("Validation error:", validationError);
+      return new Response(JSON.stringify({ error: validationError instanceof Error ? validationError.message : "Invalid input" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Ensure last message is from user
+    if (messages[messages.length - 1]?.role !== 'user') {
+      return new Response(JSON.stringify({ error: "Last message must be from user" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get user from JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Verify user session
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    let userEmail: string | null = null;
+    
+    if (user && !authError) {
+      userEmail = user.email || null;
+      
+      // Check premium status for authenticated users
+      const isPremium = await checkPremiumStatus(supabase, userEmail);
+      
+      if (!isPremium && userEmail) {
+        // Check rate limit for free users
+        if (!checkFreeUserRateLimit(userEmail)) {
+          return new Response(JSON.stringify({ 
+            error: "Free message limit reached. Please upgrade to premium for unlimited access." 
+          }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    } else {
+      // For unauthenticated requests (using anon key), still allow but with limits
+      // Use IP-based limiting for anonymous users
+      const clientIp = req.headers.get('x-forwarded-for') || 'unknown';
+      if (!checkFreeUserRateLimit(`anon_${clientIp}`)) {
+        return new Response(JSON.stringify({ 
+          error: "Rate limit reached. Please sign in for more access." 
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       console.error("LOVABLE_API_KEY is not configured");
-      throw new Error("LOVABLE_API_KEY is not configured");
+      throw new Error("AI service not configured");
     }
 
     const lastMessage = messages[messages.length - 1];
@@ -40,7 +217,8 @@ serve(async (req) => {
     console.log("Processing chat request:", { 
       messageCount: messages.length, 
       isImageGen,
-      lastMessageContent: lastMessage?.content?.substring(0, 100)
+      userEmail: userEmail ? `${userEmail.substring(0, 3)}***` : 'anonymous',
+      lastMessageLength: lastMessage?.content?.length
     });
 
     if (isImageGen) {
@@ -96,7 +274,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ 
         type: 'image',
         content: textContent,
-        images: images.map((img: any) => img.image_url?.url || img.url)
+        images: images.map((img: { image_url?: { url?: string }; url?: string }) => img.image_url?.url || img.url)
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -152,7 +330,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Chat function error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
