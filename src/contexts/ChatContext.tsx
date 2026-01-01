@@ -8,6 +8,7 @@ interface ChatContextType {
   isRecording: boolean;
   setIsRecording: (value: boolean) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  updateMessage: (messageId: string, newContent: string) => void;
   createConversation: () => void;
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
@@ -85,6 +86,36 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateMessage = (messageId: string, newContent: string) => {
+    if (!currentConversation) return;
+
+    setConversations(prev =>
+      prev.map(conv =>
+        conv.id === currentConversation.id
+          ? {
+              ...conv,
+              messages: conv.messages.map(msg =>
+                msg.id === messageId ? { ...msg, content: newContent } : msg
+              ),
+              updatedAt: new Date(),
+            }
+          : conv
+      )
+    );
+
+    setCurrentConversation(prev =>
+      prev
+        ? {
+            ...prev,
+            messages: prev.messages.map(msg =>
+              msg.id === messageId ? { ...msg, content: newContent } : msg
+            ),
+            updatedAt: new Date(),
+          }
+        : null
+    );
+  };
+
   const selectConversation = (id: string) => {
     const conv = conversations.find(c => c.id === id);
     if (conv) setCurrentConversation(conv);
@@ -110,6 +141,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isRecording,
         setIsRecording,
         addMessage,
+        updateMessage,
         createConversation,
         selectConversation,
         deleteConversation,
