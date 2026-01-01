@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Download, User, Sparkles, Pencil, X } from 'lucide-react';
+import { Copy, Check, Download, User, Sparkles, Pencil, X, RefreshCw } from 'lucide-react';
 import { Message } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,9 +8,10 @@ import { useChat } from '@/contexts/ChatContext';
 
 interface ChatMessageProps {
   message: Message;
+  onRegenerate?: () => void;
 }
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
+export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
@@ -192,6 +193,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
               >
                 <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="ml-1 sm:ml-1.5 text-xs">Download</span>
+              </Button>
+            )}
+            
+            {!isUser && onRegenerate && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 sm:h-8 px-2 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                onClick={onRegenerate}
+              >
+                <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="ml-1 sm:ml-1.5 text-xs">Regenerate</span>
               </Button>
             )}
           </div>
