@@ -38,8 +38,9 @@ serve(async (req) => {
         .eq('email', email)
         .eq('status', 'active')
         .gte('expires_at', new Date().toISOString())
+        .order('expires_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       return new Response(
         JSON.stringify({ 
@@ -71,9 +72,9 @@ serve(async (req) => {
       .eq('email', userEmail)
       .eq('status', 'active')
       .gte('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
+      .order('expires_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       return new Response(
