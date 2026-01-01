@@ -90,6 +90,8 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
         },
         handler: async function (response: any) {
           // Payment successful, verify via webhook
+          console.log('Payment response received:', response);
+          
           try {
             const { data: verifyData, error: verifyError } = await supabase.functions.invoke('razorpay-webhook', {
               body: {
@@ -99,9 +101,19 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
               }
             });
 
+            console.log('Verification response:', verifyData, verifyError);
+
             if (verifyError) {
               console.error('Verification error:', verifyError);
-              toast.error('Payment verification failed. Please contact support.');
+              toast.error('Payment verification failed. Please click "I already paid" to verify.');
+              setIsProcessing(false);
+              return;
+            }
+
+            if (verifyData?.error) {
+              console.error('Verification data error:', verifyData.error);
+              toast.error('Payment verification failed. Please click "I already paid" to verify.');
+              setIsProcessing(false);
               return;
             }
 
@@ -109,10 +121,12 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
             localStorage.setItem('geduhub_premium_email', email.trim().toLowerCase());
             setPremium(true);
             toast.success('Payment successful! Welcome to GEDUHub Premium!');
+            setIsProcessing(false);
             onClose?.();
           } catch (err) {
             console.error('Payment verification error:', err);
-            toast.error('Payment verification failed. Please contact support.');
+            toast.error('Payment verification failed. Please click "I already paid" to verify.');
+            setIsProcessing(false);
           }
         },
         modal: {
