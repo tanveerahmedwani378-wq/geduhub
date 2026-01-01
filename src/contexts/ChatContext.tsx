@@ -9,6 +9,7 @@ interface ChatContextType {
   setIsRecording: (value: boolean) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   updateMessage: (messageId: string, newContent: string) => void;
+  removeLastAssistantMessage: () => Message | null;
   createConversation: () => void;
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
@@ -116,6 +117,33 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
   };
 
+  const removeLastAssistantMessage = (): Message | null => {
+    if (!currentConversation) return null;
+    
+    const messages = currentConversation.messages;
+    const lastMessage = messages[messages.length - 1];
+    
+    if (!lastMessage || lastMessage.role !== 'assistant') return null;
+    
+    const updatedMessages = messages.slice(0, -1);
+    
+    setConversations(prev =>
+      prev.map(conv =>
+        conv.id === currentConversation.id
+          ? { ...conv, messages: updatedMessages, updatedAt: new Date() }
+          : conv
+      )
+    );
+
+    setCurrentConversation(prev =>
+      prev ? { ...prev, messages: updatedMessages, updatedAt: new Date() } : null
+    );
+    
+    // Return the last user message for regeneration
+    const lastUserMessage = updatedMessages.filter(m => m.role === 'user').pop();
+    return lastUserMessage || null;
+  };
+
   const selectConversation = (id: string) => {
     const conv = conversations.find(c => c.id === id);
     if (conv) setCurrentConversation(conv);
@@ -142,6 +170,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsRecording,
         addMessage,
         updateMessage,
+        removeLastAssistantMessage,
         createConversation,
         selectConversation,
         deleteConversation,

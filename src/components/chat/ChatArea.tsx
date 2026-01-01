@@ -11,7 +11,7 @@ import geduhubChatLogo from '@/assets/geduhub-chat-logo.png';
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export const ChatArea: React.FC = () => {
-  const { currentConversation, addMessage, userProfile, createConversation } = useChat();
+  const { currentConversation, addMessage, userProfile, createConversation, removeLastAssistantMessage } = useChat();
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -160,6 +160,126 @@ export const ChatArea: React.FC = () => {
     }
   };
 
+  const handleRegenerate = async () => {
+    const lastUserMessage = removeLastAssistantMessage();
+    if (lastUserMessage) {
+      // Re-send the last user message to get a new response
+      await handleSendForRegenerate(lastUserMessage.content, lastUserMessage.attachments);
+    }
+  };
+
+  const handleSendForRegenerate = async (content: string, attachments?: Attachment[]) => {
+    setIsLoading(true);
+    setStreamingContent('');
+
+    try {
+      // Get messages after removing the last assistant message
+      const messages = [
+        ...(currentConversation?.messages || []).map(m => ({
+          role: m.role,
+          content: m.content.slice(0, 8000),
+        })),
+      ].slice(-50);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const response = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ messages }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 402) {
+          toast.error('Free message limit reached. Please upgrade to premium for unlimited access.');
+          return;
+        }
+        if (response.status === 429) {
+          toast.error('Rate limit reached. Please wait a moment before trying again.');
+          return;
+        }
+        throw new Error(errorData.error || 'Failed to get response');
+      }
+
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType?.includes('application/json')) {
+        const data = await response.json();
+        if (data.type === 'image') {
+          let messageContent = data.content || "Here's your generated image:";
+          if (data.images && data.images.length > 0) {
+            const imageMarkdown = data.images.map((url: string) => `\n\n![Generated Image](${url})`).join('');
+            messageContent += imageMarkdown;
+          }
+          addMessage({
+            role: 'assistant',
+            content: messageContent,
+            images: data.images,
+          });
+          setStreamingContent('');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      if (!response.body) throw new Error('No response body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = '';
+      let fullResponse = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const deltaContent = parsed.choices?.[0]?.delta?.content;
+            if (deltaContent) {
+              fullResponse += deltaContent;
+              setStreamingContent(fullResponse);
+            }
+          } catch {
+            // Partial JSON, continue
+          }
+        }
+      }
+
+      if (fullResponse) {
+        addMessage({
+          role: 'assistant',
+          content: fullResponse,
+        });
+      }
+      setStreamingContent('');
+    } catch (error) {
+      console.error('Regenerate error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to regenerate response');
+      setStreamingContent('');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const needsPremium = !userProfile.isPremium && userProfile.messagesUsed >= userProfile.maxFreeMessages;
 
   // Create a temporary streaming message for display
@@ -212,8 +332,12 @@ export const ChatArea: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full">
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        {displayMessages.map(message => (
-          <ChatMessage key={message.id} message={message} />
+        {displayMessages.map((message, index) => (
+          <ChatMessage 
+            key={message.id} 
+            message={message} 
+            onRegenerate={message.role === 'assistant' && index === displayMessages.length - 1 && !isLoading ? handleRegenerate : undefined}
+          />
         ))}
         
         {streamingMessage && (
