@@ -3,15 +3,8 @@ import { Crown, Zap, MessageSquare, FileText, Mic, Clock, Loader2, Mail } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChat } from '@/contexts/ChatContext';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import geduhubLogo from '@/assets/geduhub-logo.png';
-
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
 
 interface PaymentGateProps {
   onClose?: () => void;
@@ -23,20 +16,6 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<'email' | 'payment'>('email');
 
-  const loadRazorpayScript = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (window.Razorpay) {
-        resolve(true);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !email.includes('@')) {
@@ -46,80 +25,17 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
     setStep('payment');
   };
 
-  const handlePayment = async () => {
+  const handlePayment = () => {
     setIsProcessing(true);
-
-    try {
-      // Load Razorpay script
-      const loaded = await loadRazorpayScript();
-      if (!loaded) {
-        toast.error('Failed to load payment gateway');
-        setIsProcessing(false);
-        return;
-      }
-
-      // Create order (via backend function)
-      const { data: orderData, error: orderError } = await supabase.functions.invoke(
-        'create-razorpay-order',
-        { body: { email } }
-      );
-
-      if (orderError || !orderData?.orderId) {
-        console.error('Create order error:', orderError);
-        throw new Error(orderError?.message || 'Failed to create order');
-      }
-
-      // Open Razorpay checkout
-      const options = {
-        key: orderData.keyId,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: 'GEDUHub',
-        description: 'Premium Subscription - ₹149/6 months',
-        order_id: orderData.orderId,
-        prefill: { email },
-        theme: { color: '#14b8a6' },
-        handler: async (response: any) => {
-          try {
-            const { error: verifyError } = await supabase.functions.invoke('razorpay-webhook', {
-              body: {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              },
-            });
-
-            if (!verifyError) {
-              setPremium(true);
-              localStorage.setItem('geduhub_premium_email', email);
-              toast.success('🎉 Payment successful! Welcome to Premium!');
-              onClose?.();
-            } else {
-              console.error('Verify error:', verifyError);
-              toast.error('Payment verification failed. Please contact support.');
-            }
-          } catch (error) {
-            console.error('Verification error:', error);
-            toast.error('Payment verification failed');
-          } finally {
-            setIsProcessing(false);
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setIsProcessing(false);
-            toast.info('Payment cancelled');
-          },
-        },
-      };
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast.error('Failed to initiate payment. Please try again.');
-      setIsProcessing(false);
-    }
+    
+    // Store email for reference after payment
+    localStorage.setItem('geduhub_payment_email', email);
+    
+    // Open Razorpay payment link
+    window.open('https://rzp.io/rzp/NMUKxFD0', '_blank');
+    
+    toast.info('Complete your payment in the new tab. After successful payment, refresh this page to activate your subscription.');
+    setIsProcessing(false);
   };
 
   const features = [
