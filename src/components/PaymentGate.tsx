@@ -28,13 +28,15 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
   const handlePayment = () => {
     setIsProcessing(true);
     
-    // Store email for reference after payment
-    localStorage.setItem('geduhub_payment_email', email);
+    // Store email for reference after payment - IMPORTANT: User must use same email in Razorpay
+    localStorage.setItem('geduhub_premium_email', email);
     
     // Open Razorpay payment link
     window.open('https://rzp.io/rzp/NMUKxFD0', '_blank');
     
-    toast.info('Complete your payment in the new tab. After successful payment, refresh this page to activate your subscription.');
+    toast.info(`Complete your payment using email: ${email}. After payment, refresh this page.`, {
+      duration: 10000
+    });
     setIsProcessing(false);
   };
 
