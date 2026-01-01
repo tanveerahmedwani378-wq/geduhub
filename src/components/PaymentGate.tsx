@@ -94,43 +94,60 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
         theme: {
           color: '#6366f1'
         },
-        handler: function (response: any) {
-          // Payment successful - verify synchronously then redirect
+        handler: async function (response: any) {
           console.log('Payment response received:', response);
           
-          // Call verification endpoint
-          fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/razorpay-webhook`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
-            })
-          })
-          .then(res => res.json())
-          .then(verifyData => {
+          try {
+            const verifyRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/razorpay-webhook`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+            
+            const verifyData = await verifyRes.json();
             console.log('Verification response:', verifyData);
             
-            if (verifyData.error) {
-              console.error('Verification error:', verifyData.error);
-              toast.error('Payment received! Click "I already paid" to activate.');
-            } else {
-              // Payment verified successfully
+            if (verifyData.success || verifyData.received) {
+              localStorage.setItem('geduhub_payment_email', userEmail);
               setPremium(true);
               toast.success('Payment successful! Welcome to GEDUHub Premium!');
               onClose?.();
+            } else {
+              // Fallback - check subscription directly
+              const { data } = await supabase.functions.invoke('check-subscription', {
+                body: { email: userEmail }
+              });
+              if (data?.isPremium) {
+                setPremium(true);
+                toast.success('Payment successful! Welcome to GEDUHub Premium!');
+                onClose?.();
+              } else {
+                toast.info('Payment received! Click "I already paid" to activate.');
+              }
             }
-            setIsProcessing(false);
-          })
-          .catch(err => {
+          } catch (err) {
             console.error('Verification error:', err);
-            toast.info('Payment received! Click "I already paid" to activate.');
+            // Fallback verification
+            const { data } = await supabase.functions.invoke('check-subscription', {
+              body: { email: userEmail }
+            });
+            if (data?.isPremium) {
+              setPremium(true);
+              toast.success('Payment successful!');
+              onClose?.();
+            } else {
+              toast.info('Payment received! Click "I already paid" to activate.');
+            }
+          } finally {
             setIsProcessing(false);
-          });
+          }
         },
         modal: {
           ondismiss: function() {
