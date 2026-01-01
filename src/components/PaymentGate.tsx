@@ -247,8 +247,9 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center overflow-y-auto py-4 px-4">
-      <div className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-card border border-border shadow-2xl animate-scale-in relative overflow-hidden my-auto">
+    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 overflow-y-auto overscroll-contain">
+      <div className="min-h-full flex items-center justify-center py-6 px-4">
+        <div className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-card border border-border shadow-2xl animate-scale-in relative overflow-visible">
         {/* Background decoration */}
         <div className="absolute top-0 right-0 w-60 h-60 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-accent/10 rounded-full blur-2xl" />
@@ -409,6 +410,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
             </>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
