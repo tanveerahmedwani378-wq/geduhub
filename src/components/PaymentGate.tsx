@@ -24,6 +24,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
   const [step, setStep] = useState<'email' | 'payment' | 'verify'>('email');
   const [isVerifying, setIsVerifying] = useState(false);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [testMode, setTestMode] = useState(false);
 
   // Load Razorpay SDK
   useEffect(() => {
@@ -68,7 +69,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
     try {
       // Create order via edge function
       const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
-        body: { email: userEmail }
+        body: { email: userEmail, testMode }
       });
 
       if (error || !data?.orderId) {
@@ -86,7 +87,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
         amount: data.amount,
         currency: data.currency,
         name: 'GEDUHub AI',
-        description: '6 Months Premium Subscription',
+        description: testMode ? 'Test Payment (₹1)' : '6 Months Premium Subscription',
         order_id: orderId,
         prefill: {
           email: userEmail,
@@ -320,6 +321,17 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                 </form>
               ) : (
                 <div className="space-y-3">
+                  {/* Test mode toggle */}
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer mb-2">
+                    <input
+                      type="checkbox"
+                      checked={testMode}
+                      onChange={(e) => setTestMode(e.target.checked)}
+                      className="w-4 h-4 rounded border-border"
+                    />
+                    Test mode (₹1 payment)
+                  </label>
+                  
                   <Button
                     onClick={handlePayment}
                     disabled={isProcessing || !razorpayLoaded}
@@ -338,7 +350,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                     ) : (
                       <>
                         <Crown className="w-5 h-5 mr-2" />
-                        Pay ₹149 with Razorpay
+                        Pay {testMode ? '₹1 (Test)' : '₹149'} with Razorpay
                       </>
                     )}
                   </Button>

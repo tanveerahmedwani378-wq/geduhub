@@ -50,7 +50,7 @@ serve(async (req) => {
       }
     }
 
-    const { email } = await req.json();
+    const { email, testMode } = await req.json();
 
     // Validate email format
     if (!email || typeof email !== 'string') {
@@ -102,10 +102,13 @@ serve(async (req) => {
       .eq('status', 'pending')
       .maybeSingle();
 
+    // Determine amount based on test mode
+    const amount = testMode ? 100 : 14900; // ₹1 for test, ₹149 for production
+
     if (existingOrder) {
       // Return existing order if it's less than 30 minutes old
       const orderAge = now - new Date(existingOrder.created_at).getTime();
-      if (orderAge < 30 * 60 * 1000) {
+      if (orderAge < 30 * 60 * 1000 && !testMode) {
         console.log(`Returning existing pending order for: ${trimmedEmail}`);
         return new Response(
           JSON.stringify({
@@ -127,11 +130,12 @@ serve(async (req) => {
     }
 
     // Create Razorpay order
+    console.log(`Creating order for ${trimmedEmail} with amount: ${amount} paise (testMode: ${testMode})`);
     const orderData = {
-      amount: 14900, // ₹149 in paise
+      amount: amount,
       currency: 'INR',
       receipt: `receipt_${Date.now()}`,
-      notes: { email: trimmedEmail }
+      notes: { email: trimmedEmail, testMode: testMode ? 'true' : 'false' }
     };
 
     const auth = btoa(`${keyId}:${keySecret}`);
@@ -161,7 +165,7 @@ serve(async (req) => {
     const { error: dbError } = await supabase.from('subscriptions').insert({
       email: trimmedEmail,
       razorpay_order_id: order.id,
-      amount: 14900,
+      amount: amount,
       currency: 'INR',
       status: 'pending'
     });
