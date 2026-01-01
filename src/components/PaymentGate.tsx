@@ -60,11 +60,15 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
     }
 
     setIsProcessing(true);
+    const userEmail = email.trim().toLowerCase();
+    
+    // Store email before payment
+    localStorage.setItem('geduhub_premium_email', userEmail);
     
     try {
       // Create order via edge function
       const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
-        body: { email: email.trim().toLowerCase() }
+        body: { email: userEmail }
       });
 
       if (error || !data?.orderId) {
@@ -74,6 +78,8 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
         return;
       }
 
+      const orderId = data.orderId;
+
       // Open Razorpay checkout
       const options = {
         key: data.keyId,
@@ -81,53 +87,50 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
         currency: data.currency,
         name: 'GEDUHub AI',
         description: '6 Months Premium Subscription',
-        order_id: data.orderId,
+        order_id: orderId,
         prefill: {
-          email: email.trim().toLowerCase(),
+          email: userEmail,
         },
         theme: {
           color: '#6366f1'
         },
-        handler: async function (response: any) {
-          // Payment successful, verify via webhook
+        handler: function (response: any) {
+          // Payment successful - verify synchronously then redirect
           console.log('Payment response received:', response);
           
-          try {
-            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('razorpay-webhook', {
-              body: {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature
-              }
-            });
-
-            console.log('Verification response:', verifyData, verifyError);
-
-            if (verifyError) {
-              console.error('Verification error:', verifyError);
-              toast.error('Payment verification failed. Please click "I already paid" to verify.');
-              setIsProcessing(false);
-              return;
+          // Call verification endpoint
+          fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/razorpay-webhook`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          })
+          .then(res => res.json())
+          .then(verifyData => {
+            console.log('Verification response:', verifyData);
+            
+            if (verifyData.error) {
+              console.error('Verification error:', verifyData.error);
+              toast.error('Payment received! Click "I already paid" to activate.');
+            } else {
+              // Payment verified successfully
+              setPremium(true);
+              toast.success('Payment successful! Welcome to GEDUHub Premium!');
+              onClose?.();
             }
-
-            if (verifyData?.error) {
-              console.error('Verification data error:', verifyData.error);
-              toast.error('Payment verification failed. Please click "I already paid" to verify.');
-              setIsProcessing(false);
-              return;
-            }
-
-            // Payment verified successfully
-            localStorage.setItem('geduhub_premium_email', email.trim().toLowerCase());
-            setPremium(true);
-            toast.success('Payment successful! Welcome to GEDUHub Premium!');
             setIsProcessing(false);
-            onClose?.();
-          } catch (err) {
-            console.error('Payment verification error:', err);
-            toast.error('Payment verification failed. Please click "I already paid" to verify.');
+          })
+          .catch(err => {
+            console.error('Verification error:', err);
+            toast.info('Payment received! Click "I already paid" to activate.');
             setIsProcessing(false);
-          }
+          });
         },
         modal: {
           ondismiss: function() {
