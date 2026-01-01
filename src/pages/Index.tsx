@@ -22,8 +22,8 @@ const AppContent: React.FC = () => {
     hasCheckedPayment.current = true;
 
     const checkPaymentStatus = async () => {
-      // First check localStorage for saved email
-      const savedEmail = localStorage.getItem('geduhub_premium_email');
+      // Check both localStorage keys (old and new payment flow)
+      const savedEmail = localStorage.getItem('geduhub_premium_email') || localStorage.getItem('geduhub_payment_email');
       
       if (savedEmail) {
         // Verify subscription is still active
@@ -33,6 +33,8 @@ const AppContent: React.FC = () => {
           });
           
           if (!error && data?.isPremium) {
+            // Store in the standard key for consistency
+            localStorage.setItem('geduhub_premium_email', savedEmail);
             setIsPaid(true);
             setPremium(true);
             return;
