@@ -97,8 +97,35 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
         },
         handler: async function (response: any) {
           console.log('Payment response received:', response);
+          toast.info('Verifying payment...');
+          
+          // Helper to activate premium
+          const activatePremium = () => {
+            localStorage.setItem('geduhub_payment_email', userEmail);
+            localStorage.setItem('geduhub_premium_email', userEmail);
+            setPremium(true);
+            toast.success('Payment successful! Welcome to GEDUHub Premium!');
+            onClose?.();
+            setIsProcessing(false);
+          };
+
+          // Helper to check subscription status
+          const checkSubscription = async (): Promise<boolean> => {
+            try {
+              const { data } = await supabase.functions.invoke('check-subscription', {
+                body: { email: userEmail }
+              });
+              console.log('Subscription check result:', data);
+              return data?.isPremium === true;
+            } catch (e) {
+              console.error('Subscription check error:', e);
+              return false;
+            }
+          };
           
           try {
+            // Try to verify payment with webhook
+            console.log('Calling razorpay-webhook for verification...');
             const verifyRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/razorpay-webhook`, {
               method: 'POST',
               headers: {
@@ -115,40 +142,35 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
             const verifyData = await verifyRes.json();
             console.log('Verification response:', verifyData);
             
-            if (verifyData.success || verifyData.received) {
-              localStorage.setItem('geduhub_payment_email', userEmail);
-              setPremium(true);
-              toast.success('Payment successful! Welcome to GEDUHub Premium!');
-              onClose?.();
-            } else {
-              // Fallback - check subscription directly
-              const { data } = await supabase.functions.invoke('check-subscription', {
-                body: { email: userEmail }
-              });
-              if (data?.isPremium) {
-                setPremium(true);
-                toast.success('Payment successful! Welcome to GEDUHub Premium!');
-                onClose?.();
-              } else {
-                toast.info('Payment received! Click "I already paid" to activate.');
-              }
+            if (verifyData.success) {
+              activatePremium();
+              return;
             }
           } catch (err) {
-            console.error('Verification error:', err);
-            // Fallback verification
-            const { data } = await supabase.functions.invoke('check-subscription', {
-              body: { email: userEmail }
-            });
-            if (data?.isPremium) {
-              setPremium(true);
-              toast.success('Payment successful!');
-              onClose?.();
-            } else {
-              toast.info('Payment received! Click "I already paid" to activate.');
-            }
-          } finally {
-            setIsProcessing(false);
+            console.error('Webhook verification error:', err);
           }
+          
+          // Fallback: Wait a moment and check subscription status directly
+          console.log('Fallback: Checking subscription status...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          if (await checkSubscription()) {
+            activatePremium();
+            return;
+          }
+          
+          // Final fallback: Wait longer and try again
+          console.log('Second fallback: Waiting and checking again...');
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          if (await checkSubscription()) {
+            activatePremium();
+            return;
+          }
+          
+          // If all else fails, show manual verification option
+          setIsProcessing(false);
+          toast.info('Payment received! Click "I already paid" to verify your subscription.');
         },
         modal: {
           ondismiss: function() {
