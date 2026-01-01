@@ -101,6 +101,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
           
           // Helper to activate premium
           const activatePremium = () => {
+            console.log('Activating premium for:', userEmail);
             localStorage.setItem('geduhub_payment_email', userEmail);
             localStorage.setItem('geduhub_premium_email', userEmail);
             setPremium(true);
@@ -112,10 +113,11 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
           // Helper to check subscription status
           const checkSubscription = async (): Promise<boolean> => {
             try {
-              const { data } = await supabase.functions.invoke('check-subscription', {
+              console.log('Checking subscription for:', userEmail);
+              const { data, error } = await supabase.functions.invoke('check-subscription', {
                 body: { email: userEmail }
               });
-              console.log('Subscription check result:', data);
+              console.log('Subscription check result:', data, 'Error:', error);
               return data?.isPremium === true;
             } catch (e) {
               console.error('Subscription check error:', e);
@@ -125,24 +127,29 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
           
           try {
             // Try to verify payment with webhook
-            console.log('Calling razorpay-webhook for verification...');
-            const verifyRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/razorpay-webhook`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              },
-              body: JSON.stringify({
+            console.log('Calling razorpay-webhook for verification with payload:', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            });
+            
+            const verifyRes = await supabase.functions.invoke('razorpay-webhook', {
+              body: {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature
-              })
+              }
             });
             
-            const verifyData = await verifyRes.json();
-            console.log('Verification response:', verifyData);
+            console.log('Webhook verification response:', verifyRes);
             
-            if (verifyData.success) {
+            if (verifyRes.data?.success) {
+              activatePremium();
+              return;
+            }
+            
+            // Even if webhook didn't return success, check if DB was updated
+            if (await checkSubscription()) {
               activatePremium();
               return;
             }
@@ -151,7 +158,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
           }
           
           // Fallback: Wait a moment and check subscription status directly
-          console.log('Fallback: Checking subscription status...');
+          console.log('Fallback 1: Waiting 2s and checking subscription...');
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           if (await checkSubscription()) {
@@ -160,7 +167,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
           }
           
           // Final fallback: Wait longer and try again
-          console.log('Second fallback: Waiting and checking again...');
+          console.log('Fallback 2: Waiting 3s more and checking again...');
           await new Promise(resolve => setTimeout(resolve, 3000));
           
           if (await checkSubscription()) {
@@ -169,6 +176,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
           }
           
           // If all else fails, show manual verification option
+          console.log('All verification attempts failed, showing manual option');
           setIsProcessing(false);
           toast.info('Payment received! Click "I already paid" to verify your subscription.');
         },
