@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Crown, Zap, MessageSquare, FileText, Mic, Clock, Loader2, Mail, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,12 @@ import { useChat } from '@/contexts/ChatContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import geduhubLogo from '@/assets/geduhub-logo.png';
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 interface PaymentGateProps {
   onClose?: () => void;
@@ -17,6 +23,26 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<'email' | 'payment' | 'verify'>('email');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+
+  // Load Razorpay SDK
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => setRazorpayLoaded(true);
+    script.onerror = () => {
+      console.error('Failed to load Razorpay SDK');
+      toast.error('Failed to load payment system');
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,19 +53,89 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
     setStep('payment');
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
+    if (!razorpayLoaded) {
+      toast.error('Payment system is loading, please wait...');
+      return;
+    }
+
     setIsProcessing(true);
     
-    // Store email for reference after payment - IMPORTANT: User must use same email in Razorpay
-    localStorage.setItem('geduhub_premium_email', email);
-    
-    // Open Razorpay payment link
-    window.open('https://rzp.io/rzp/NMUKxFD0', '_blank');
-    
-    toast.info(`Complete your payment using email: ${email}. After payment, refresh this page.`, {
-      duration: 10000
-    });
-    setIsProcessing(false);
+    try {
+      // Create order via edge function
+      const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+        body: { email: email.trim().toLowerCase() }
+      });
+
+      if (error || !data?.orderId) {
+        console.error('Order creation error:', error || data?.error);
+        toast.error(data?.error || 'Failed to create order. Please try again.');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Open Razorpay checkout
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: 'GEDUHub AI',
+        description: '6 Months Premium Subscription',
+        order_id: data.orderId,
+        prefill: {
+          email: email.trim().toLowerCase(),
+        },
+        theme: {
+          color: '#6366f1'
+        },
+        handler: async function (response: any) {
+          // Payment successful, verify via webhook
+          try {
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('razorpay-webhook', {
+              body: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              }
+            });
+
+            if (verifyError) {
+              console.error('Verification error:', verifyError);
+              toast.error('Payment verification failed. Please contact support.');
+              return;
+            }
+
+            // Payment verified successfully
+            localStorage.setItem('geduhub_premium_email', email.trim().toLowerCase());
+            setPremium(true);
+            toast.success('Payment successful! Welcome to GEDUHub Premium!');
+            onClose?.();
+          } catch (err) {
+            console.error('Payment verification error:', err);
+            toast.error('Payment verification failed. Please contact support.');
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            setIsProcessing(false);
+            toast.info('Payment cancelled');
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        console.error('Payment failed:', response.error);
+        toast.error(`Payment failed: ${response.error.description}`);
+        setIsProcessing(false);
+      });
+      rzp.open();
+
+    } catch (err) {
+      console.error('Payment error:', err);
+      toast.error('Failed to initiate payment. Please try again.');
+      setIsProcessing(false);
+    }
   };
 
   const handleVerifySubscription = async (e: React.FormEvent) => {
@@ -192,13 +288,18 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                 <div className="space-y-3">
                   <Button
                     onClick={handlePayment}
-                    disabled={isProcessing}
+                    disabled={isProcessing || !razorpayLoaded}
                     className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground font-medium py-6 text-lg glow-primary transition-all duration-300"
                   >
                     {isProcessing ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                         Processing...
+                      </>
+                    ) : !razorpayLoaded ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Loading...
                       </>
                     ) : (
                       <>
@@ -236,4 +337,3 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
     </div>
   );
 };
-
