@@ -247,15 +247,15 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full p-8 rounded-2xl bg-card border border-border shadow-2xl animate-scale-in relative overflow-hidden">
+    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center overflow-y-auto py-4 px-4">
+      <div className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-card border border-border shadow-2xl animate-scale-in relative overflow-hidden my-auto">
         {/* Background decoration */}
         <div className="absolute top-0 right-0 w-60 h-60 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-accent/10 rounded-full blur-2xl" />
 
         <div className="relative">
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 sm:mb-8">
             <img src={geduhubLogo} alt="GEDUHub" className="w-20 h-20 rounded-2xl mx-auto mb-4 glow-primary animate-float" />
             <h2 className="text-2xl font-bold text-foreground mb-2">
               {step === 'verify' ? 'Verify Your Subscription' : 'Welcome to GEDUHub AI'}
@@ -306,15 +306,15 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
           ) : (
             <>
               {/* Price */}
-              <div className="text-center mb-6">
+              <div className="text-center mb-4 sm:mb-6">
                 <div className="inline-flex items-baseline gap-1">
-                  <span className="text-5xl font-bold gradient-text">₹149</span>
-                  <span className="text-muted-foreground">/6 months</span>
+                  <span className="text-4xl sm:text-5xl font-bold gradient-text">₹149</span>
+                  <span className="text-sm sm:text-base text-muted-foreground">/6 months</span>
                 </div>
               </div>
 
-              {/* Features */}
-              <div className="space-y-3 mb-8">
+              {/* Features - Hidden on very small screens */}
+              <div className="space-y-2 sm:space-y-3 mb-6 sm:mb-8 max-h-[180px] sm:max-h-none overflow-y-auto">
                 {features.map((feature, i) => (
                   <div
                     key={i}
