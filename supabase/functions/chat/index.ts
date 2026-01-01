@@ -292,7 +292,7 @@ serve(async (req) => {
         messages: [
           { 
             role: "system", 
-            content: "You are GEDUHub AI, a helpful and intelligent assistant. You provide clear, accurate, and helpful responses. You can help with questions, writing, analysis, coding, math, science, and much more. Be concise but thorough in your explanations. If someone asks you to generate, create, or draw an image, let them know you can do that - just ask them to describe what they want to see." 
+            content: "You are GEDUHub AI, a helpful assistant. Keep your responses SHORT and CONCISE - aim for 2-4 sentences maximum unless the user explicitly asks for more detail. Get straight to the point. No unnecessary explanations or filler. If someone asks to generate or draw an image, just tell them to describe what they want." 
           },
           ...messages,
         ],
