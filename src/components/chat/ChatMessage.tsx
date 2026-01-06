@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useChat } from '@/contexts/ChatContext';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { saveAs } from 'file-saver';
 
 interface ChatMessageProps {
   message: Message;
@@ -25,15 +27,30 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate 
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([message.content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `response-${message.id.slice(0, 8)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Downloaded successfully');
+  const handleDownload = async () => {
+    try {
+      // Split content into paragraphs
+      const paragraphs = message.content.split('\n').map(line => 
+        new Paragraph({
+          children: [new TextRun({ text: line || ' ', size: 24 })],
+          spacing: { after: 200 },
+        })
+      );
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: paragraphs,
+        }],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, `response-${message.id.slice(0, 8)}.docx`);
+      toast.success('Downloaded as Word document');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download');
+    }
   };
 
   const handleEdit = () => {
