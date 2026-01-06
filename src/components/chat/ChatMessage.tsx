@@ -128,22 +128,44 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate 
                   className="absolute bottom-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                   onClick={async (e) => {
                     e.stopPropagation();
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    
                     try {
                       const response = await fetch(imageUrl);
                       const blob = await response.blob();
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = `generated-image-${index + 1}.png`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(url);
-                      toast.success('Image downloaded');
-                    } catch {
-                      // Fallback: open in new tab for manual save
+                      const file = new File([blob], `generated-image-${index + 1}.png`, { type: 'image/png' });
+                      
+                      // Use Web Share API on mobile if available (best for iOS/Android)
+                      if (isMobile && navigator.share && navigator.canShare?.({ files: [file] })) {
+                        await navigator.share({
+                          files: [file],
+                          title: 'Generated Image',
+                        });
+                        toast.success('Image shared');
+                        return;
+                      }
+                      
+                      // Desktop: use blob download
+                      if (!isMobile) {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `generated-image-${index + 1}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                        toast.success('Image downloaded');
+                        return;
+                      }
+                      
+                      // Mobile fallback: open in new tab
                       window.open(imageUrl, '_blank');
-                      toast.info('Long press to save image');
+                      toast.info('Long press the image to save');
+                    } catch {
+                      // Final fallback
+                      window.open(imageUrl, '_blank');
+                      toast.info('Long press the image to save');
                     }
                   }}
                 >
