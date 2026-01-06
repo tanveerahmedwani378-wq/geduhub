@@ -102,8 +102,8 @@ serve(async (req) => {
       .eq('status', 'pending')
       .maybeSingle();
 
-    // Determine amount based on test mode
-    const amount = testMode ? 100 : 14900; // ₹1 for test, ₹149 for production
+    // Determine amount based on test mode (USD - Razorpay uses smallest currency unit: cents)
+    const amount = testMode ? 1 : 165; // $0.01 for test, $1.65 for production
 
     if (existingOrder) {
       // Return existing order if it's less than 30 minutes old
@@ -113,8 +113,8 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             orderId: existingOrder.razorpay_order_id,
-            amount: 14900,
-            currency: 'INR',
+            amount: 165,
+            currency: 'USD',
             keyId
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -133,7 +133,7 @@ serve(async (req) => {
     console.log(`Creating order for ${trimmedEmail} with amount: ${amount} paise (testMode: ${testMode})`);
     const orderData = {
       amount: amount,
-      currency: 'INR',
+      currency: 'USD',
       receipt: `receipt_${Date.now()}`,
       notes: { email: trimmedEmail, testMode: testMode ? 'true' : 'false' }
     };
@@ -166,7 +166,7 @@ serve(async (req) => {
       email: trimmedEmail,
       razorpay_order_id: order.id,
       amount: amount,
-      currency: 'INR',
+      currency: 'USD',
       status: 'pending'
     });
 

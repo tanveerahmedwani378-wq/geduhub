@@ -309,7 +309,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
               {/* Price */}
               <div className="text-center mb-4 sm:mb-6">
                 <div className="inline-flex items-baseline gap-1">
-                  <span className="text-4xl sm:text-5xl font-bold gradient-text">₹149</span>
+                  <span className="text-4xl sm:text-5xl font-bold gradient-text">$1.65</span>
                   <span className="text-sm sm:text-base text-muted-foreground">/6 months</span>
                 </div>
               </div>
@@ -360,7 +360,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                       onChange={(e) => setTestMode(e.target.checked)}
                       className="w-4 h-4 rounded border-border"
                     />
-                    Test mode (₹1 payment)
+                    Test mode ($0.01 payment)
                   </label>
                   
                   <Button
@@ -381,7 +381,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                     ) : (
                       <>
                         <Crown className="w-5 h-5 mr-2" />
-                        Pay {testMode ? '₹1 (Test)' : '₹149'} with Razorpay
+                        Pay {testMode ? '$0.01 (Test)' : '$1.65'} with Razorpay
                       </>
                     )}
                   </Button>
