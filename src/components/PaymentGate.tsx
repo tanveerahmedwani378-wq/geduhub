@@ -7,12 +7,6 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import geduhubLogo from '@/assets/geduhub-logo.png';
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
 interface PaymentGateProps {
   onClose?: () => void;
 }
@@ -23,27 +17,43 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<'email' | 'payment' | 'verify'>('email');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [testMode, setTestMode] = useState(false);
 
-  // Load Razorpay SDK
+  // Check for payment callback on mount
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => setRazorpayLoaded(true);
-    script.onerror = () => {
-      console.error('Failed to load Razorpay SDK');
-      toast.error('Failed to load payment system');
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const paymentEmail = urlParams.get('email');
+    
+    if (paymentStatus === 'success' && paymentEmail) {
+      // Clear URL params
+      window.history.replaceState({}, '', window.location.pathname);
+      
+      // Store email and verify subscription
+      localStorage.setItem('geduhub_premium_email', paymentEmail);
+      verifyAndActivate(paymentEmail);
+    } else if (paymentStatus === 'failed') {
+      window.history.replaceState({}, '', window.location.pathname);
+      toast.error('Payment failed. Please try again.');
+    }
   }, []);
+
+  const verifyAndActivate = async (userEmail: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-subscription', {
+        body: { email: userEmail }
+      });
+
+      if (data?.isPremium) {
+        localStorage.setItem('geduhub_premium_email', userEmail);
+        setPremium(true);
+        toast.success('Payment successful! Welcome to GEDUHub Premium!');
+        onClose?.();
+      }
+    } catch (err) {
+      console.error('Verification error:', err);
+    }
+  };
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,11 +65,6 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
   };
 
   const handlePayment = async () => {
-    if (!razorpayLoaded) {
-      toast.error('Payment system is loading, please wait...');
-      return;
-    }
-
     setIsProcessing(true);
     const userEmail = email.trim().toLowerCase();
     
@@ -67,9 +72,13 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
     localStorage.setItem('geduhub_premium_email', userEmail);
     
     try {
-      // Create order via edge function
-      const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
-        body: { email: userEmail, testMode }
+      // Create CCAvenue order via edge function
+      const { data, error } = await supabase.functions.invoke('create-ccavenue-order', {
+        body: { 
+          email: userEmail, 
+          testMode,
+          returnUrl: window.location.origin
+        }
       });
 
       if (error || !data?.orderId) {
@@ -79,122 +88,27 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
         return;
       }
 
-      const orderId = data.orderId;
-
-      // Open Razorpay checkout
-      const options = {
-        key: data.keyId,
-        amount: data.amount,
-        currency: data.currency,
-        name: 'GEDUHub AI',
-        description: testMode ? 'Test Payment (₹1)' : '6 Months Premium Subscription',
-        order_id: orderId,
-        prefill: {
-          email: userEmail,
-        },
-        theme: {
-          color: '#6366f1'
-        },
-        handler: async function (response: any) {
-          console.log('Payment response received:', response);
-          toast.info('Verifying payment...');
-          
-          // Helper to activate premium
-          const activatePremium = () => {
-            console.log('Activating premium for:', userEmail);
-            localStorage.setItem('geduhub_payment_email', userEmail);
-            localStorage.setItem('geduhub_premium_email', userEmail);
-            setPremium(true);
-            toast.success('Payment successful! Welcome to GEDUHub Premium!');
-            onClose?.();
-            setIsProcessing(false);
-          };
-
-          // Helper to check subscription status
-          const checkSubscription = async (): Promise<boolean> => {
-            try {
-              console.log('Checking subscription for:', userEmail);
-              const { data, error } = await supabase.functions.invoke('check-subscription', {
-                body: { email: userEmail }
-              });
-              console.log('Subscription check result:', data, 'Error:', error);
-              return data?.isPremium === true;
-            } catch (e) {
-              console.error('Subscription check error:', e);
-              return false;
-            }
-          };
-          
-          try {
-            // Try to verify payment with webhook
-            console.log('Calling razorpay-webhook for verification with payload:', {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
-            });
-            
-            const verifyRes = await supabase.functions.invoke('razorpay-webhook', {
-              body: {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature
-              }
-            });
-            
-            console.log('Webhook verification response:', verifyRes);
-            
-            if (verifyRes.data?.success) {
-              activatePremium();
-              return;
-            }
-            
-            // Even if webhook didn't return success, check if DB was updated
-            if (await checkSubscription()) {
-              activatePremium();
-              return;
-            }
-          } catch (err) {
-            console.error('Webhook verification error:', err);
-          }
-          
-          // Fallback: Wait a moment and check subscription status directly
-          console.log('Fallback 1: Waiting 2s and checking subscription...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          if (await checkSubscription()) {
-            activatePremium();
-            return;
-          }
-          
-          // Final fallback: Wait longer and try again
-          console.log('Fallback 2: Waiting 3s more and checking again...');
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          if (await checkSubscription()) {
-            activatePremium();
-            return;
-          }
-          
-          // If all else fails, show manual verification option
-          console.log('All verification attempts failed, showing manual option');
-          setIsProcessing(false);
-          toast.info('Payment received! Click "I already paid" to verify your subscription.');
-        },
-        modal: {
-          ondismiss: function() {
-            setIsProcessing(false);
-            toast.info('Payment cancelled');
-          }
-        }
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
-        console.error('Payment failed:', response.error);
-        toast.error(`Payment failed: ${response.error.description}`);
-        setIsProcessing(false);
-      });
-      rzp.open();
+      // Create and submit CCAvenue form
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = data.ccavenueUrl;
+      
+      // Add encrypted data
+      const encDataInput = document.createElement('input');
+      encDataInput.type = 'hidden';
+      encDataInput.name = 'encRequest';
+      encDataInput.value = data.encryptedData;
+      form.appendChild(encDataInput);
+      
+      // Add access code
+      const accessCodeInput = document.createElement('input');
+      accessCodeInput.type = 'hidden';
+      accessCodeInput.name = 'access_code';
+      accessCodeInput.value = data.accessCode;
+      form.appendChild(accessCodeInput);
+      
+      document.body.appendChild(form);
+      form.submit();
 
     } catch (err) {
       console.error('Payment error:', err);
@@ -309,9 +223,10 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
               {/* Price */}
               <div className="text-center mb-4 sm:mb-6">
                 <div className="inline-flex items-baseline gap-1">
-                  <span className="text-4xl sm:text-5xl font-bold gradient-text">$1.65</span>
+                  <span className="text-4xl sm:text-5xl font-bold gradient-text">₹138</span>
                   <span className="text-sm sm:text-base text-muted-foreground">/6 months</span>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">(~$1.65 USD)</p>
               </div>
 
               {/* Features - Hidden on very small screens */}
@@ -360,28 +275,23 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                       onChange={(e) => setTestMode(e.target.checked)}
                       className="w-4 h-4 rounded border-border"
                     />
-                    Test mode ($0.01 payment)
+                    Test mode (₹1 payment)
                   </label>
                   
                   <Button
                     onClick={handlePayment}
-                    disabled={isProcessing || !razorpayLoaded}
+                    disabled={isProcessing}
                     className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground font-medium py-6 text-lg glow-primary transition-all duration-300"
                   >
                     {isProcessing ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : !razorpayLoaded ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Loading...
+                        Redirecting to CCAvenue...
                       </>
                     ) : (
                       <>
                         <Crown className="w-5 h-5 mr-2" />
-                        Pay {testMode ? '$0.01 (Test)' : '$1.65'} with Razorpay
+                        Pay {testMode ? '₹1 (Test)' : '₹138'} with CCAvenue
                       </>
                     )}
                   </Button>
@@ -406,7 +316,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                 </button>
               </div>
 
-              <p className="text-center text-xs text-muted-foreground mt-4">🔒 Secure payment • Cancel anytime • Instant activation</p>
+              <p className="text-center text-xs text-muted-foreground mt-4">🔒 Secure payment via CCAvenue • Cancel anytime • Instant activation</p>
             </>
           )}
         </div>

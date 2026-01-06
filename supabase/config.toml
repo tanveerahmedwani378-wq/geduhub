@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.elevenlabs-scribe-token]
 verify_jwt = true
+
+[functions.create-ccavenue-order]
+verify_jwt = false
+
+[functions.ccavenue-webhook]
+verify_jwt = false
