@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { crypto as stdCrypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,8 +17,8 @@ async function decrypt(encryptedText: string, workingKey: string): Promise<strin
     encryptedText.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
   );
   
-  // Create MD5 hash of working key for AES key
-  const keyHash = await crypto.subtle.digest('MD5', encoder.encode(workingKey));
+  // Create MD5 hash of working key using std crypto
+  const keyHash = await stdCrypto.subtle.digest('MD5', encoder.encode(workingKey));
   const key = new Uint8Array(keyHash);
   
   // Extract IV (first 16 bytes) and ciphertext

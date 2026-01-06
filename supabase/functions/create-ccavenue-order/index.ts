@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
+import { crypto as stdCrypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,12 +15,12 @@ const RATE_WINDOW = 60 * 60 * 1000; // 1 hour
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// CCAvenue encryption using AES-128-CBC
+// CCAvenue encryption using AES-128-CBC with MD5 key derivation
 async function encrypt(plainText: string, workingKey: string): Promise<string> {
   const encoder = new TextEncoder();
   
-  // Create MD5 hash of working key for AES key
-  const keyHash = await crypto.subtle.digest('MD5', encoder.encode(workingKey));
+  // Create MD5 hash of working key using std crypto
+  const keyHash = await stdCrypto.subtle.digest('MD5', encoder.encode(workingKey));
   const key = new Uint8Array(keyHash);
   
   // Generate random IV (16 bytes)
