@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Download, User, Sparkles, Pencil, X, RefreshCw } from 'lucide-react';
+import { Copy, Check, Download, User, Sparkles, Pencil, X, RefreshCw, FileText, Presentation } from 'lucide-react';
 import { Message } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useChat } from '@/contexts/ChatContext';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
+import { generatePresentation } from '@/lib/presentationGenerator';
 
 interface ChatMessageProps {
   message: Message;
@@ -50,6 +51,16 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate 
     } catch (error) {
       console.error('Download error:', error);
       toast.error('Failed to download');
+    }
+  };
+
+  const handleDownloadPPT = async () => {
+    try {
+      await generatePresentation(message.content, `presentation-${message.id.slice(0, 8)}`);
+      toast.success('Downloaded as PowerPoint');
+    } catch (error) {
+      console.error('PPT download error:', error);
+      toast.error('Failed to create presentation');
     }
   };
 
@@ -242,8 +253,20 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate 
                 className="h-7 sm:h-8 px-2 text-muted-foreground hover:text-foreground hover:bg-secondary"
                 onClick={handleDownload}
               >
-                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="ml-1 sm:ml-1.5 text-xs">Download</span>
+                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="ml-1 sm:ml-1.5 text-xs">Word</span>
+              </Button>
+            )}
+
+            {!isUser && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 sm:h-8 px-2 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                onClick={handleDownloadPPT}
+              >
+                <Presentation className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="ml-1 sm:ml-1.5 text-xs">PPT</span>
               </Button>
             )}
             
