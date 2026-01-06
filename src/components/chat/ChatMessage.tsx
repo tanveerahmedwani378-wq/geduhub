@@ -125,14 +125,26 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate 
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
+                  className="absolute bottom-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    const link = document.createElement('a');
-                    link.href = imageUrl;
-                    link.download = `generated-image-${index + 1}.png`;
-                    link.click();
-                    toast.success('Image downloaded');
+                    try {
+                      const response = await fetch(imageUrl);
+                      const blob = await response.blob();
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `generated-image-${index + 1}.png`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                      toast.success('Image downloaded');
+                    } catch {
+                      // Fallback: open in new tab for manual save
+                      window.open(imageUrl, '_blank');
+                      toast.info('Long press to save image');
+                    }
                   }}
                 >
                   <Download className="w-4 h-4" />
