@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff, Plus, X, Loader2, Image, FileText, Brain, Search, MoreHorizontal } from 'lucide-react';
+import { Send, Mic, MicOff, Plus, X, Loader2, Image, FileText, Brain, Search, MoreHorizontal, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { Attachment } from '@/types/chat';
@@ -25,7 +25,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
   const [fileContents, setFileContents] = useState<Map<string, string>>(new Map());
   const { isRecording, setIsRecording } = useChat();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   // Voice recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -317,12 +317,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
       case 'image':
         setInput('Generate an image of ');
         break;
+      case 'analyze':
+        setInput('Analyze this image and describe what you see: ');
+        toast.info('Attach an image to analyze');
+        break;
       case 'thinking':
         setInput('[Thinking mode] ');
         toast.info('Deep thinking mode enabled');
-        break;
-      case 'research':
-        setInput('Research and explain ');
         break;
       default:
         break;
@@ -360,6 +361,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
           onChange={handleFileSelect}
           className="hidden"
         />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
 
         <DropdownMenu open={showMenu} onOpenChange={setShowMenu}>
           <DropdownMenuTrigger asChild>
@@ -374,6 +383,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onClick={() => cameraInputRef.current?.click()}>
+              <Camera className="w-4 h-4 mr-2" />
+              Take photo
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
               <FileText className="w-4 h-4 mr-2" />
               Add photos & files
@@ -383,13 +396,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
               <Image className="w-4 h-4 mr-2" />
               Create image
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleFeatureClick('analyze')}>
+              <Search className="w-4 h-4 mr-2" />
+              Analyze image
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleFeatureClick('thinking')}>
               <Brain className="w-4 h-4 mr-2" />
               Thinking
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleFeatureClick('research')}>
-              <Search className="w-4 h-4 mr-2" />
-              Deep research
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled>
