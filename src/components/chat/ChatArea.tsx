@@ -294,17 +294,19 @@ export const ChatArea: React.FC = () => {
   if (!currentConversation || displayMessages.length === 0) {
     return (
       <div className="flex-1 flex flex-col h-full bg-gradient-to-b from-background via-background to-secondary/20">
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <div className="mb-6">
-            <img src={geduhubChatLogo} alt="GEDUHub" className="w-24 h-24 rounded-2xl shadow-lg shadow-primary/25" />
+        <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8">
+          {/* Mobile: Minimal centered logo and greeting */}
+          <div className="mb-4 md:mb-6">
+            <img src={geduhubChatLogo} alt="GEDUHub" className="w-16 h-16 md:w-24 md:h-24 rounded-2xl shadow-lg shadow-primary/25" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent mb-4">
+          <h1 className="text-2xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent mb-2 md:mb-4 text-center">
             What can I help with?
           </h1>
-          <p className="text-muted-foreground text-lg mb-12 max-w-md text-center">
+          <p className="text-muted-foreground text-sm md:text-lg mb-6 md:mb-12 max-w-md text-center hidden md:block">
             Ask me anything — from writing and research to creating images and deep thinking.
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mb-8">
+          {/* Feature cards - only show on desktop */}
+          <div className="hidden md:grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mb-8">
             {[
               { icon: '🎨', title: 'Create image', desc: 'Generate AI art', gradient: 'from-pink-500/20 to-rose-500/20', border: 'hover:border-pink-400/50' },
               { icon: '🧠', title: 'Thinking', desc: 'Deep reasoning', gradient: 'from-purple-500/20 to-violet-500/20', border: 'hover:border-purple-400/50' },
