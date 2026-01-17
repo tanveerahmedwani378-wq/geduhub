@@ -169,12 +169,29 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
 
   const extractPdfText = async (file: File): Promise<string> => {
     try {
+      console.log('Starting PDF extraction for:', file.name, 'Size:', file.size);
+      
+      // Use react-pdftotext for extraction
       const text = await pdfToText(file);
-      console.log(`PDF extracted: ${text.length} characters`);
+      
+      if (!text || text.trim().length === 0) {
+        console.warn('PDF extraction returned empty text');
+        return '[The PDF appears to be empty or contains only images/scanned content that cannot be extracted as text. Please copy and paste the text manually.]';
+      }
+      
+      console.log(`PDF extracted successfully: ${text.length} characters`);
       return text;
     } catch (error) {
       console.error('PDF extraction error:', error);
-      return `[Failed to extract PDF text: ${error instanceof Error ? error.message : 'Unknown error'}]`;
+      
+      // Provide helpful error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage.includes('worker') || errorMessage.includes('Worker')) {
+        return '[PDF extraction failed due to browser limitations. Please copy and paste the text from your PDF manually.]';
+      }
+      
+      return `[Failed to extract PDF text. This might be a scanned PDF or protected document. Please copy and paste the text manually. Error: ${errorMessage}]`;
     }
   };
 
@@ -221,7 +238,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
       } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
         toast.info(`Extracting text from ${file.name}...`);
         const pdfText = await extractPdfText(file);
-        toast.success(`Extracted text from ${file.name}`);
+        
+        // Check if extraction was successful
+        if (pdfText.startsWith('[Failed') || pdfText.startsWith('[The PDF') || pdfText.startsWith('[PDF extraction')) {
+          toast.warning(`Could not fully extract text from ${file.name}`);
+        } else {
+          toast.success(`Extracted ${pdfText.length} characters from ${file.name}`);
+        }
+        
         return { attachment, content: pdfText, id };
       } else if (file.type.startsWith('image/')) {
         // Convert image to base64 for AI analysis
