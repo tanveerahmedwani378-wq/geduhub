@@ -14,8 +14,8 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 
-// Set up PDF.js worker with legacy build for better compatibility
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/legacy/build/pdf.worker.min.mjs`;
+// Disable worker to avoid CDN loading issues - uses main thread instead
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 interface ChatInputProps {
   onSend: (content: string, attachments?: Attachment[]) => void;
@@ -173,10 +173,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
   const extractPdfText = async (file: File): Promise<string> => {
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const textParts: string[] = [];
+      const pdf = await pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        useSystemFonts: true
+      }).promise;
       
-      for (let i = 1; i <= pdf.numPages; i++) {
+      const textParts: string[] = [];
+      const numPages = Math.min(pdf.numPages, 50); // Limit to 50 pages
+      
+      for (let i = 1; i <= numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         const pageText = textContent.items
@@ -185,10 +192,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
         textParts.push(`[Page ${i}]\n${pageText}`);
       }
       
-      return textParts.join('\n\n');
+      if (pdf.numPages > 50) {
+        textParts.push(`\n[Note: Only first 50 of ${pdf.numPages} pages extracted]`);
+      }
+      
+      const fullText = textParts.join('\n\n');
+      console.log(`PDF extracted: ${pdf.numPages} pages, ${fullText.length} characters`);
+      return fullText;
     } catch (error) {
       console.error('PDF extraction error:', error);
-      return '[Failed to extract PDF text]';
+      return `[Failed to extract PDF text: ${error instanceof Error ? error.message : 'Unknown error'}]`;
     }
   };
 
