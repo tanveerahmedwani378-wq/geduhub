@@ -194,12 +194,27 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
+
+    // Check limit - max 10 files
+    const totalFiles = attachments.length + files.length;
+    if (totalFiles > 10) {
+      toast.error(`Maximum 10 files allowed. You have ${attachments.length} files, trying to add ${files.length}.`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
     const newAttachments: Attachment[] = [];
     const newContents = new Map(fileContents);
 
-    for (const file of Array.from(files)) {
+    // Process files in parallel for speed
+    const fileProcessingPromises = Array.from(files).map(async (file) => {
+      // Check file size (20MB limit)
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 20MB)`);
+        return null;
+      }
+
       const id = crypto.randomUUID();
       const attachment: Attachment = {
         id,
@@ -207,35 +222,55 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
         type: file.type.startsWith('image/') ? 'image' : 'document',
         size: file.size,
       };
-      newAttachments.push(attachment);
 
       // Read text content from documents
-      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+      if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv')) {
         try {
           const content = await readFileAsText(file);
-          newContents.set(id, content);
+          return { attachment, content, id };
         } catch (error) {
           console.error('Failed to read file:', error);
+          return { attachment, content: '[Failed to read file]', id };
         }
       } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
         toast.info(`Extracting text from ${file.name}...`);
         const pdfText = await extractPdfText(file);
-        newContents.set(id, pdfText);
         toast.success(`Extracted text from ${file.name}`);
+        return { attachment, content: pdfText, id };
       } else if (file.type.startsWith('image/')) {
         // Convert image to base64 for AI analysis
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          newContents.set(id, e.target?.result as string || '');
-          setFileContents(new Map(newContents));
-        };
-        reader.readAsDataURL(file);
+        return new Promise<{ attachment: Attachment; content: string; id: string }>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            resolve({ attachment, content: e.target?.result as string || '', id });
+          };
+          reader.onerror = () => {
+            resolve({ attachment, content: '[Failed to read image]', id });
+          };
+          reader.readAsDataURL(file);
+        });
+      } else {
+        // Other file types - just attach without content
+        return { attachment, content: '[Unsupported file format]', id };
+      }
+    });
+
+    const results = await Promise.all(fileProcessingPromises);
+    
+    for (const result of results) {
+      if (result) {
+        newAttachments.push(result.attachment);
+        newContents.set(result.id, result.content);
       }
     }
 
     setFileContents(newContents);
     setAttachments(prev => [...prev, ...newAttachments]);
-    toast.success(`${files.length} file(s) attached`);
+    
+    if (newAttachments.length > 0) {
+      toast.success(`${newAttachments.length} file(s) attached and ready for analysis`);
+    }
+    
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
