@@ -9,6 +9,7 @@ interface ChatContextType {
   setIsRecording: (value: boolean) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   updateMessage: (messageId: string, newContent: string) => void;
+  editAndResend: (messageId: string, newContent: string) => string | null;
   removeLastAssistantMessage: () => Message | null;
   createConversation: () => void;
   selectConversation: (id: string) => void;
@@ -117,6 +118,32 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
   };
 
+  const editAndResend = (messageId: string, newContent: string): string | null => {
+    if (!currentConversation) return null;
+
+    const messageIndex = currentConversation.messages.findIndex(m => m.id === messageId);
+    if (messageIndex === -1) return null;
+
+    // Keep messages up to and including the edited message, but update its content
+    const updatedMessages = currentConversation.messages
+      .slice(0, messageIndex + 1)
+      .map(msg => msg.id === messageId ? { ...msg, content: newContent } : msg);
+
+    setConversations(prev =>
+      prev.map(conv =>
+        conv.id === currentConversation.id
+          ? { ...conv, messages: updatedMessages, updatedAt: new Date() }
+          : conv
+      )
+    );
+
+    setCurrentConversation(prev =>
+      prev ? { ...prev, messages: updatedMessages, updatedAt: new Date() } : null
+    );
+
+    return newContent;
+  };
+
   const removeLastAssistantMessage = (): Message | null => {
     if (!currentConversation) return null;
     
@@ -170,6 +197,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsRecording,
         addMessage,
         updateMessage,
+        editAndResend,
         removeLastAssistantMessage,
         createConversation,
         selectConversation,

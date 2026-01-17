@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Download, User, Sparkles, Pencil, X, RefreshCw, FileText, Presentation } from 'lucide-react';
+import { Copy, Check, Download, User, Sparkles, Pencil, X, RefreshCw, FileText, Presentation, Send } from 'lucide-react';
 import { Message } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,9 +12,10 @@ import { generatePresentation } from '@/lib/presentationGenerator';
 interface ChatMessageProps {
   message: Message;
   onRegenerate?: () => void;
+  onEditAndResend?: (messageId: string, newContent: string) => void;
 }
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
+export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, onEditAndResend }) => {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
@@ -77,6 +78,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate 
     setIsEditing(false);
   };
 
+  const handleEditAndResend = () => {
+    if (editContent.trim() && onEditAndResend) {
+      onEditAndResend(message.id, editContent.trim());
+      setIsEditing(false);
+    }
+  };
+
   const handleCancelEdit = () => {
     setEditContent(message.content);
     setIsEditing(false);
@@ -123,9 +131,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate 
               className="min-h-[80px] text-sm"
               autoFocus
             />
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSaveEdit} className="h-8">
-                Save
+            <div className="flex gap-2 flex-wrap">
+              {onEditAndResend && (
+                <Button size="sm" onClick={handleEditAndResend} className="h-8 bg-primary hover:bg-primary/90">
+                  <Send className="w-4 h-4 mr-1" />
+                  Resend
+                </Button>
+              )}
+              <Button size="sm" variant="secondary" onClick={handleSaveEdit} className="h-8">
+                Save only
               </Button>
               <Button size="sm" variant="ghost" onClick={handleCancelEdit} className="h-8">
                 <X className="w-4 h-4 mr-1" />
