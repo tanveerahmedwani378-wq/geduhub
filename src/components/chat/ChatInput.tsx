@@ -58,12 +58,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Shift+Enter sends message, Enter creates new line
-    if (e.key === 'Enter' && e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
+    // On mobile, always allow new lines (Enter key)
+    // On desktop, Shift+Enter sends message, Enter creates new line
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (e.key === 'Enter') {
+      if (isMobile) {
+        // On mobile, Enter always creates new line - do nothing (default behavior)
+        return;
+      }
+      
+      // On desktop: Shift+Enter sends message
+      if (e.shiftKey) {
+        e.preventDefault();
+        handleSubmit(e);
+      }
+      // Regular Enter on desktop allows new line (default behavior)
     }
-    // Regular Enter allows new line (default behavior)
   };
 
   const startRecording = useCallback(async () => {
