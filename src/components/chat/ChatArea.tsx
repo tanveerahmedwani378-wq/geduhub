@@ -300,7 +300,7 @@ export const ChatArea: React.FC = () => {
             <img src={geduhubChatLogo} alt="GEDUHub" className="w-16 h-16 md:w-24 md:h-24 rounded-2xl shadow-lg shadow-primary/25" />
           </div>
           <h1 className="text-2xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent mb-2 md:mb-4 text-center">
-            What can I help with?
+            Ready when you are.
           </h1>
           <p className="text-muted-foreground text-sm md:text-lg mb-6 md:mb-12 max-w-md text-center hidden md:block">
             Ask me anything — from writing and research to creating images and deep thinking.

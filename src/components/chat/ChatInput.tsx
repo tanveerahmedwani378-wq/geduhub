@@ -58,10 +58,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Shift+Enter sends message, Enter creates new line
+    if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
     }
+    // Regular Enter allows new line (default behavior)
   };
 
   const startRecording = useCallback(async () => {
