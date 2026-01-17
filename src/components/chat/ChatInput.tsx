@@ -5,7 +5,6 @@ import { useChat } from '@/contexts/ChatContext';
 import { Attachment } from '@/types/chat';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import pdfToText from 'react-pdftotext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -171,27 +170,36 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
     try {
       console.log('Starting PDF extraction for:', file.name, 'Size:', file.size);
       
-      // Use react-pdftotext for extraction
-      const text = await pdfToText(file);
+      // Use backend edge function for reliable PDF parsing
+      const formData = new FormData();
+      formData.append('file', file);
       
-      if (!text || text.trim().length === 0) {
-        console.warn('PDF extraction returned empty text');
-        return '[The PDF appears to be empty or contains only images/scanned content that cannot be extracted as text. Please copy and paste the text manually.]';
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-pdf`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('PDF parse API error:', errorData);
+        return `[Failed to extract PDF text: ${errorData.error || 'Server error'}]`;
       }
       
-      console.log(`PDF extracted successfully: ${text.length} characters`);
-      return text;
+      const data = await response.json();
+      
+      if (!data.text || data.text.trim().length === 0) {
+        console.warn('PDF extraction returned empty text');
+        return '[The PDF appears to be empty or contains only images/scanned content. Please copy and paste the text manually.]';
+      }
+      
+      console.log(`PDF extracted successfully: ${data.pages} pages, ${data.text.length} characters`);
+      return data.text;
     } catch (error) {
       console.error('PDF extraction error:', error);
-      
-      // Provide helpful error message
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      if (errorMessage.includes('worker') || errorMessage.includes('Worker')) {
-        return '[PDF extraction failed due to browser limitations. Please copy and paste the text from your PDF manually.]';
-      }
-      
-      return `[Failed to extract PDF text. This might be a scanned PDF or protected document. Please copy and paste the text manually. Error: ${errorMessage}]`;
+      return `[Failed to extract PDF text. Please copy and paste the text manually. Error: ${error instanceof Error ? error.message : 'Unknown error'}]`;
     }
   };
 
