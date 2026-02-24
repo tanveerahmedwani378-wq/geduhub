@@ -103,7 +103,7 @@ serve(async (req) => {
       .maybeSingle();
 
     // Determine amount based on test mode (USD - Razorpay uses smallest currency unit: cents)
-    const amount = testMode ? 1 : 165; // $0.01 for test, $1.65 for production
+    const amount = testMode ? 1 : 178; // $0.01 for test, $1.78 for production (approx ₹149)
 
     if (existingOrder) {
       // Return existing order if it's less than 30 minutes old
@@ -113,7 +113,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             orderId: existingOrder.razorpay_order_id,
-            amount: 165,
+            amount: 178,
             currency: 'USD',
             keyId
           }),
