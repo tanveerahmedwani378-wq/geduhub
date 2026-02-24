@@ -84,7 +84,7 @@ export const SettingsPage: React.FC = () => {
               <>
                 <div className="flex items-baseline gap-1 mb-6">
                   <span className="text-4xl font-bold text-foreground">₹149</span>
-                  <span className="text-muted-foreground">/month</span>
+                  <span className="text-muted-foreground">/6 months</span>
                 </div>
 
                 <div className="space-y-3 mb-6">

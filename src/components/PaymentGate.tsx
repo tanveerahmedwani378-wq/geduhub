@@ -223,10 +223,10 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
               {/* Price */}
               <div className="text-center mb-4 sm:mb-6">
                 <div className="inline-flex items-baseline gap-1">
-                  <span className="text-4xl sm:text-5xl font-bold gradient-text">₹138</span>
+                  <span className="text-4xl sm:text-5xl font-bold gradient-text">₹149</span>
                   <span className="text-sm sm:text-base text-muted-foreground">/6 months</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">(~$1.65 USD)</p>
+                <p className="text-xs text-muted-foreground mt-1">(~$1.78 USD)</p>
               </div>
 
               {/* Features - Hidden on very small screens */}
@@ -291,7 +291,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                     ) : (
                       <>
                         <Crown className="w-5 h-5 mr-2" />
-                        Pay {testMode ? '₹1 (Test)' : '₹138'} with CCAvenue
+                        Pay {testMode ? '₹1 (Test)' : '₹149'} with CCAvenue
                       </>
                     )}
                   </Button>

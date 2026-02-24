@@ -130,8 +130,8 @@ serve(async (req) => {
     const orderId = `GEDU_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     // Amount in INR (CCAvenue primarily works with INR)
-    // $1.65 USD ≈ ₹138 INR (approximate conversion)
-    const amount = testMode ? '1.00' : '138.00';
+    // $1.78 USD ≈ ₹149 INR (approximate conversion)
+    const amount = testMode ? '1.00' : '149.00';
     const currency = 'INR';
 
     // CCAvenue redirect URL for response
