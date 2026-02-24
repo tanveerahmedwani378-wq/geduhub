@@ -57,9 +57,12 @@ function validateMessages(messages: unknown): ValidatedMessage[] {
       throw new Error(`Invalid content at index ${idx}`);
     }
 
-    // Length limit per message (8000 chars max)
-    if ((m.content as string).length > 8000) {
-      throw new Error(`Message too long at index ${idx} (max 8000 characters)`);
+    // Length limit per message (100000 chars for documents, 8000 for regular)
+    const hasDocument = (m.content as string).includes('[File:');
+    const maxLen = hasDocument ? 100000 : 8000;
+    if ((m.content as string).length > maxLen) {
+      // Truncate instead of rejecting, to preserve document analysis
+      (m as Record<string, unknown>).content = (m.content as string).substring(0, maxLen);
     }
 
     // Sanitize content - remove null bytes and control characters
