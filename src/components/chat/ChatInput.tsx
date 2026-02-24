@@ -478,8 +478,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
         </Button>
       </form>
       
-      {/* Disclaimer */}
+      {/* Send hint + Disclaimer */}
       <p className="text-center text-xs text-muted-foreground mt-2">
+        <span className="hidden sm:inline">Shift+Enter to send · </span>
         GEDUHub can make mistakes. Check important info. 
         <a href="/privacy" className="underline hover:text-foreground ml-1">Privacy Policy</a>
         {' · '}
