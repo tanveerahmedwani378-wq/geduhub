@@ -269,17 +269,33 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
         
         return { attachment, content: pdfText, id };
       } else if (file.type.startsWith('image/')) {
-        // Convert image to base64 for AI analysis
-        return new Promise<{ attachment: Attachment; content: string; id: string }>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            resolve({ attachment, content: e.target?.result as string || '', id });
-          };
-          reader.onerror = () => {
-            resolve({ attachment, content: '[Failed to read image]', id });
-          };
-          reader.readAsDataURL(file);
-        });
+        // Use vision API to extract text from images
+        toast.info(`Extracting text from ${file.name}...`);
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-pdf`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: formData,
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.text && data.text.trim().length > 0) {
+              toast.success(`Extracted text from ${file.name}`);
+              return { attachment, content: data.text, id };
+            }
+          }
+          toast.warning(`Could not extract text from ${file.name}`);
+          return { attachment, content: '[Could not extract readable text from this image]', id };
+        } catch (error) {
+          console.error('Image text extraction error:', error);
+          return { attachment, content: '[Failed to extract text from image]', id };
+        }
       } else {
         // Other file types - just attach without content
         return { attachment, content: '[Unsupported file format]', id };
