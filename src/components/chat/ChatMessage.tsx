@@ -92,8 +92,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
 
   return (
     <div
-      className={`flex gap-3 sm:gap-4 p-3 sm:p-4 animate-fade-in rounded-xl mx-1 sm:mx-2 my-1 ${
-        isUser ? 'bg-user-message text-white' : 'bg-card text-foreground'
+      className={`flex gap-3 sm:gap-4 p-3 sm:p-4 animate-fade-in rounded-xl mx-1 sm:mx-2 my-1 max-w-[85%] ${
+        isUser ? 'bg-user-message text-white ml-auto' : 'bg-card text-foreground mr-auto'
       }`}
     >
       <div
