@@ -49,7 +49,7 @@
     --ai-gradient: linear-gradient(135deg, hsl(174 72% 40%), hsl(199 89% 48%));
     --user-bubble: 220 14% 96%;
     --ai-bubble: 220 14% 92%;
-    --user-message: 230 80% 12%;
+    --user-message: 146 38% 74%;
     --glow-primary: 0 0 40px hsl(174 72% 40% / 0.2);
     --glow-accent: 0 0 60px hsl(199 89% 48% / 0.15);
   }
@@ -96,7 +96,7 @@
     --ai-gradient: linear-gradient(135deg, hsl(174 72% 56%), hsl(199 89% 48%));
     --user-bubble: 222 30% 16%;
     --ai-bubble: 222 30% 10%;
-    --user-message: 230 80% 12%;
+    --user-message: 146 38% 74%;
     --glow-primary: 0 0 40px hsl(174 72% 56% / 0.3);
     --glow-accent: 0 0 60px hsl(199 89% 48% / 0.2);
   }
