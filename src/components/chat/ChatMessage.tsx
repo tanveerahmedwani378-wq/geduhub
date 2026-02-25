@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Copy, Check, Download, User, Sparkles, Pencil, X, RefreshCw, FileText, Presentation, Send } from 'lucide-react';
 import { Message } from '@/types/chat';
 import { Button } from '@/components/ui/button';
@@ -139,13 +140,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
               </Button>
             </div>
           </div>
-        ) : (
-          <div className={`leading-relaxed whitespace-pre-wrap break-words ${
-            isUser ? 'bg-user-message text-foreground rounded-2xl px-4 py-2.5 inline-block' : 'text-foreground/90'
-          }`}>
-            {message.content.replace(/!\[Generated Image\]\([^)]+\)/g, '')}
-          </div>
-        )}
+        ) : isUser ? (
+            <div className="bg-user-message text-foreground rounded-2xl px-4 py-2.5 inline-block leading-relaxed whitespace-pre-wrap break-words">
+              {message.content.replace(/!\[Generated Image\]\([^)]+\)/g, '')}
+            </div>
+          ) : (
+            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90">
+              <ReactMarkdown>{message.content.replace(/!\[Generated Image\]\([^)]+\)/g, '')}</ReactMarkdown>
+            </div>
+          )}
 
         {/* Display generated images */}
         {message.images && message.images.length > 0 && (
