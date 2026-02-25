@@ -92,8 +92,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
 
   return (
     <div
-      className={`flex gap-3 sm:gap-4 p-3 sm:p-4 animate-fade-in ${
-        isUser ? 'bg-transparent' : 'bg-ai-bubble/50'
+      className={`flex gap-3 sm:gap-4 p-3 sm:p-4 animate-fade-in rounded-xl mx-1 sm:mx-2 my-1 ${
+        isUser ? 'bg-user-message text-white' : 'bg-card text-foreground'
       }`}
     >
       <div
@@ -112,10 +112,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
 
       <div className="flex-1 space-y-2 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">
+          <span className={`text-sm font-medium ${isUser ? 'text-white' : 'text-foreground'}`}>
             {isUser ? 'You' : 'GEDUHub'}
           </span>
-          <span className="text-xs text-muted-foreground">
+          <span className={`text-xs ${isUser ? 'text-white/70' : 'text-muted-foreground'}`}>
             {message.timestamp.toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -148,7 +148,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
             </div>
           </div>
         ) : (
-          <div className="text-foreground/90 leading-relaxed whitespace-pre-wrap break-words">
+          <div className={`leading-relaxed whitespace-pre-wrap break-words ${isUser ? 'text-white' : 'text-foreground/90'}`}>
             {message.content.replace(/!\[Generated Image\]\([^)]+\)/g, '')}
           </div>
         )}
