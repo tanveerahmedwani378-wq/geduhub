@@ -66,6 +66,7 @@ export default {
         },
         user: {
           bubble: "hsl(var(--user-bubble))",
+          message: "hsl(var(--user-message))",
         },
       },
       borderRadius: {
