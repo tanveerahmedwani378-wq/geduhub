@@ -92,36 +92,28 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
 
   return (
     <div
-      className={`flex gap-3 sm:gap-4 p-3 sm:p-4 animate-fade-in rounded-xl mx-1 sm:mx-2 my-1 max-w-[85%] ${
-        isUser ? 'bg-user-message text-foreground ml-auto' : 'bg-card text-foreground mr-auto'
+      className={`flex gap-3 sm:gap-4 p-3 sm:p-4 animate-fade-in mx-1 sm:mx-2 my-1 ${
+        isUser ? 'justify-end' : 'justify-start'
       }`}
     >
-      <div
-        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 ${
-          isUser
-            ? 'bg-secondary'
-            : 'bg-gradient-to-br from-primary to-accent glow-primary'
-        }`}
-      >
-        {isUser ? (
-          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
-        ) : (
+      {!isUser && (
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-primary to-accent glow-primary">
           <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-foreground" />
-        )}
-      </div>
-
-      <div className="flex-1 space-y-2 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className={`text-sm font-medium text-foreground`}>
-            {isUser ? 'You' : 'GEDUHub'}
-          </span>
-          <span className={`text-xs text-muted-foreground`}>
-            {message.timestamp.toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
         </div>
+      )}
+
+      <div className={`space-y-2 min-w-0 ${isUser ? 'max-w-[70%]' : 'flex-1 max-w-[85%]'}`}>
+        {!isUser && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">GEDUHub</span>
+            <span className="text-xs text-muted-foreground">
+              {message.timestamp.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+          </div>
+        )}
 
         {isEditing ? (
           <div className="space-y-2">
@@ -148,7 +140,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
             </div>
           </div>
         ) : (
-          <div className={`leading-relaxed whitespace-pre-wrap break-words text-foreground/90`}>
+          <div className={`leading-relaxed whitespace-pre-wrap break-words ${
+            isUser ? 'bg-user-message text-foreground rounded-2xl px-4 py-2.5 inline-block' : 'text-foreground/90'
+          }`}>
             {message.content.replace(/!\[Generated Image\]\([^)]+\)/g, '')}
           </div>
         )}
@@ -298,6 +292,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
           </div>
         )}
       </div>
+
+      {isUser && (
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0 bg-secondary">
+          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+        </div>
+      )}
     </div>
   );
 };
