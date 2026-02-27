@@ -269,15 +269,27 @@ serve(async (req) => {
       }
 
       const data = await response.json();
-      console.log("Image generation response received");
+      console.log("Image generation response received, structure:", JSON.stringify(Object.keys(data)));
 
-      const textContent = data.choices?.[0]?.message?.content || "Here's your generated image:";
-      const images = data.choices?.[0]?.message?.images || [];
+      const choice = data.choices?.[0]?.message;
+      const textContent = choice?.content || "Here's your generated image:";
+      const images = choice?.images || [];
+      
+      console.log("Images found:", images.length);
+      
+      // Extract image URLs - handle multiple possible formats
+      const imageUrls = images.map((img: Record<string, unknown>) => {
+        if (typeof img === 'string') return img;
+        const imgUrl = img as { image_url?: { url?: string }; url?: string; type?: string };
+        return imgUrl.image_url?.url || imgUrl.url || null;
+      }).filter(Boolean);
+      
+      console.log("Extracted image URLs count:", imageUrls.length);
 
       return new Response(JSON.stringify({ 
         type: 'image',
         content: textContent,
-        images: images.map((img: { image_url?: { url?: string }; url?: string }) => img.image_url?.url || img.url)
+        images: imageUrls
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
