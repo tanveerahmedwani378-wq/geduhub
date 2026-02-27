@@ -1,39 +1,44 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { ChatArea } from '@/components/chat/ChatArea';
 import { LibraryPage } from '@/components/pages/LibraryPage';
 import { SettingsPage } from '@/components/pages/SettingsPage';
-import { PaymentGate } from '@/components/PaymentGate';
+// Subscription system commented out - users can directly access the dashboard
+// import { PaymentGate } from '@/components/PaymentGate';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+// import { supabase } from '@/integrations/supabase/client';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings'>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isPaid, setIsPaid] = useState<boolean | null>(null); // null = loading
   const { selectConversation, setPremium } = useChat();
+
+  // Subscription system commented out - grant premium access directly
+  useEffect(() => {
+    setPremium(true);
+  }, [setPremium]);
+
+  /*
+  // --- Subscription check logic (commented out) ---
+  const [isPaid, setIsPaid] = useState<boolean | null>(null); // null = loading
   const hasCheckedPayment = useRef(false);
 
-  // Check if user has paid on mount - only once
   useEffect(() => {
     if (hasCheckedPayment.current) return;
     hasCheckedPayment.current = true;
 
     const checkPaymentStatus = async () => {
-      // Check both localStorage keys (old and new payment flow)
       const savedEmail = localStorage.getItem('geduhub_premium_email') || localStorage.getItem('geduhub_payment_email');
       
       if (savedEmail) {
-        // Verify subscription is still active
         try {
           const { data, error } = await supabase.functions.invoke('check-subscription', {
             body: { email: savedEmail }
           });
           
           if (!error && data?.isPremium) {
-            // Store in the standard key for consistency
             localStorage.setItem('geduhub_premium_email', savedEmail);
             setIsPaid(true);
             setPremium(true);
@@ -44,7 +49,6 @@ const AppContent: React.FC = () => {
         }
       }
       
-      // Not paid
       setIsPaid(false);
     };
 
@@ -55,12 +59,16 @@ const AppContent: React.FC = () => {
     setIsPaid(true);
     setPremium(true);
   };
+  // --- End subscription check logic ---
+  */
 
   const handleSelectConversation = (id: string) => {
     selectConversation(id);
     setCurrentPage('chat');
   };
 
+  /*
+  // --- Subscription gate UI (commented out) ---
   // Show loading state while checking payment
   if (isPaid === null) {
     return (
@@ -77,6 +85,8 @@ const AppContent: React.FC = () => {
   if (!isPaid) {
     return <PaymentGate onClose={handlePaymentSuccess} />;
   }
+  // --- End subscription gate UI ---
+  */
 
   return (
     <div className="h-screen flex bg-background overflow-hidden">
