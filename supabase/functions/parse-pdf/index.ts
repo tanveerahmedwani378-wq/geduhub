@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const pdfParse = async (buffer: Uint8Array) => {
-  const pdf = (await import("npm:pdf-parse@1.1.1")).default;
+  const { default: pdf } = await import("https://esm.sh/pdf-parse@1.1.1");
   return pdf(buffer);
 };
 
