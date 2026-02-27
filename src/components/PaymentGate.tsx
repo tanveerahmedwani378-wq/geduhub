@@ -18,17 +18,6 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
   const [step, setStep] = useState<'email' | 'payment' | 'verify'>('email');
   const [isVerifying, setIsVerifying] = useState(false);
   const [testMode, setTestMode] = useState(false);
-  const [isIndian, setIsIndian] = useState(true);
-
-  // Detect user region via timezone
-  useEffect(() => {
-    try {
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      setIsIndian(tz === 'Asia/Kolkata' || tz === 'Asia/Calcutta');
-    } catch {
-      setIsIndian(true); // default to INR
-    }
-  }, []);
 
   // Check for payment callback on mount
   useEffect(() => {
@@ -104,7 +93,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
       }
 
       const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
-        body: { email: userEmail, testMode, currency: isIndian ? 'INR' : 'USD' }
+        body: { email: userEmail, testMode }
       });
 
       if (error || !data?.orderId) {
@@ -264,7 +253,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
               {/* Price */}
               <div className="text-center mb-4 sm:mb-6">
                 <div className="inline-flex items-baseline gap-1">
-                  <span className="text-4xl sm:text-5xl font-bold gradient-text">{isIndian ? '₹1' : '$0.50'}</span>
+                  <span className="text-4xl sm:text-5xl font-bold gradient-text">₹1</span>
                   <span className="text-sm sm:text-base text-muted-foreground">/6 months</span>
                 </div>
               </div>
@@ -331,7 +320,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                     ) : (
                       <>
                         <Crown className="w-5 h-5 mr-2" />
-                        Pay {isIndian ? '₹1' : '$0.50'} with Razorpay
+                        Pay ₹1 with Razorpay
                       </>
                     )}
                   </Button>
