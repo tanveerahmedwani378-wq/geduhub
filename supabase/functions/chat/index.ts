@@ -225,74 +225,86 @@ serve(async (req) => {
     });
 
     if (isImageGen) {
-      // Use image generation model
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
-          messages: [
-            { 
-              role: "system", 
-              content: "You are GEDUHub AI, an expert image generator. Generate high-quality, creative images based on user descriptions. Be artistic and detailed in your creations." 
-            },
-            { role: "user", content: lastMessage.content }
-          ],
-          modalities: ["image", "text"]
-        }),
-      });
+      // Use image generation model via chat completions
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 55000); // 55s timeout
+      
+      try {
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-image",
+            messages: [
+              { 
+                role: "system", 
+                content: "Generate an image based on the user's description. Keep text response very brief." 
+              },
+              { role: "user", content: lastMessage.content }
+            ],
+            modalities: ["image", "text"]
+          }),
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("AI gateway error for image gen:", response.status, errorText);
-        
-        if (response.status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-            status: 429,
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("AI gateway error for image gen:", response.status, errorText);
+          
+          if (response.status === 429) {
+            return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+              status: 429,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          if (response.status === 402) {
+            return new Response(JSON.stringify({ error: "Payment required. Please add credits to continue." }), {
+              status: 402,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          
+          return new Response(JSON.stringify({ error: "Image generation failed" }), {
+            status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        if (response.status === 402) {
-          return new Response(JSON.stringify({ error: "Payment required. Please add credits to continue." }), {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
+
+        const data = await response.json();
+        console.log("Image generation response received");
+
+        const choice = data.choices?.[0]?.message;
+        const textContent = choice?.content || "Here's your generated image:";
+        const images = choice?.images || [];
         
-        return new Response(JSON.stringify({ error: "Image generation failed" }), {
-          status: 500,
+        const imageUrls = images.map((img: Record<string, unknown>) => {
+          if (typeof img === 'string') return img;
+          const imgUrl = img as { image_url?: { url?: string }; url?: string };
+          return imgUrl.image_url?.url || imgUrl.url || null;
+        }).filter(Boolean);
+        
+        console.log("Extracted image URLs count:", imageUrls.length);
+
+        return new Response(JSON.stringify({ 
+          type: 'image',
+          content: textContent,
+          images: imageUrls
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (abortError) {
+        clearTimeout(timeout);
+        console.error("Image generation timed out or aborted:", abortError);
+        return new Response(JSON.stringify({ error: "Image generation timed out. Please try again." }), {
+          status: 504,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      const data = await response.json();
-      console.log("Image generation response received, structure:", JSON.stringify(Object.keys(data)));
-
-      const choice = data.choices?.[0]?.message;
-      const textContent = choice?.content || "Here's your generated image:";
-      const images = choice?.images || [];
-      
-      console.log("Images found:", images.length);
-      
-      // Extract image URLs - handle multiple possible formats
-      const imageUrls = images.map((img: Record<string, unknown>) => {
-        if (typeof img === 'string') return img;
-        const imgUrl = img as { image_url?: { url?: string }; url?: string; type?: string };
-        return imgUrl.image_url?.url || imgUrl.url || null;
-      }).filter(Boolean);
-      
-      console.log("Extracted image URLs count:", imageUrls.length);
-
-      return new Response(JSON.stringify({ 
-        type: 'image',
-        content: textContent,
-        images: imageUrls
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
     // Regular text chat - streaming
