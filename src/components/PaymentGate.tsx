@@ -64,21 +64,36 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
     setStep('payment');
   };
 
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePayment = async () => {
     setIsProcessing(true);
     const userEmail = email.trim().toLowerCase();
     
-    // Store email before payment
     localStorage.setItem('geduhub_premium_email', userEmail);
     
     try {
-      // Create CCAvenue order via edge function
-      const { data, error } = await supabase.functions.invoke('create-ccavenue-order', {
-        body: { 
-          email: userEmail, 
-          testMode,
-          returnUrl: window.location.origin
-        }
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        toast.error('Failed to load payment gateway. Please try again.');
+        setIsProcessing(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+        body: { email: userEmail, testMode }
       });
 
       if (error || !data?.orderId) {
@@ -88,27 +103,42 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
         return;
       }
 
-      // Create and submit CCAvenue form
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = data.ccavenueUrl;
-      
-      // Add encrypted data
-      const encDataInput = document.createElement('input');
-      encDataInput.type = 'hidden';
-      encDataInput.name = 'encRequest';
-      encDataInput.value = data.encryptedData;
-      form.appendChild(encDataInput);
-      
-      // Add access code
-      const accessCodeInput = document.createElement('input');
-      accessCodeInput.type = 'hidden';
-      accessCodeInput.name = 'access_code';
-      accessCodeInput.value = data.accessCode;
-      form.appendChild(accessCodeInput);
-      
-      document.body.appendChild(form);
-      form.submit();
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: 'GEDUHub Premium',
+        description: '6-month Premium Subscription',
+        order_id: data.orderId,
+        prefill: { email: userEmail },
+        handler: async (response: any) => {
+          // Verify payment via webhook
+          const { data: verifyData, error: verifyError } = await supabase.functions.invoke('razorpay-webhook', {
+            body: {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }
+          });
+
+          if (verifyError) {
+            toast.error('Payment verification failed. Please contact support.');
+            setIsProcessing(false);
+            return;
+          }
+
+          verifyAndActivate(userEmail);
+        },
+        modal: {
+          ondismiss: () => {
+            setIsProcessing(false);
+          }
+        },
+        theme: { color: '#6366f1' }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
 
     } catch (err) {
       console.error('Payment error:', err);
@@ -286,12 +316,12 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                     {isProcessing ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Redirecting to CCAvenue...
+                        Processing Payment...
                       </>
                     ) : (
                       <>
                         <Crown className="w-5 h-5 mr-2" />
-                        Pay {testMode ? '₹1 (Test)' : '₹149'} with CCAvenue
+                        Pay {testMode ? '₹1 (Test)' : '₹149'} with Razorpay
                       </>
                     )}
                   </Button>
@@ -316,7 +346,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({ onClose }) => {
                 </button>
               </div>
 
-              <p className="text-center text-xs text-muted-foreground mt-4">🔒 Secure payment via CCAvenue • Cancel anytime • Instant activation</p>
+              <p className="text-center text-xs text-muted-foreground mt-4">🔒 Secure payment via Razorpay • Cancel anytime • Instant activation</p>
             </>
           )}
         </div>
