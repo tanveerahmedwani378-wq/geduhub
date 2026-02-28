@@ -501,6 +501,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
         <a href="/privacy" className="underline hover:text-foreground ml-1">Privacy Policy</a>
         {' · '}
         <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>
+        {' · '}
+        <a href="mailto:myaiiseduhub@gmail.com" className="underline hover:text-foreground">myaiiseduhub@gmail.com</a>
       </p>
     </div>
   );
