@@ -161,6 +161,13 @@ const Terms = () => {
               >
                 mayaiisEDUHub@gmail.com
               </a>
+              {' | '}
+              <a 
+                href="mailto:myaiiseduhub@gmail.com" 
+                className="text-cyan-400 hover:text-cyan-300 underline"
+              >
+                myaiiseduhub@gmail.com
+              </a>
             </p>
           </section>
         </div>

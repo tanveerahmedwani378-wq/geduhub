@@ -130,7 +130,7 @@ const Privacy = () => {
               If you have any questions about this Privacy Policy or our data practices, please contact us at:
             </p>
             <p className="text-muted-foreground mt-4">
-              <strong>Email:</strong> mayaiisEDUHub@gmail.com
+              <strong>Email:</strong> mayaiisEDUHub@gmail.com | myaiiseduhub@gmail.com
             </p>
           </section>
         </div>
