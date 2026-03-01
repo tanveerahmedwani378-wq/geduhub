@@ -1,25 +1,21 @@
 project_id = "mxfruxtrsqdehvatuihj"
 
-[functions.chat]
-verify_jwt = false
-
-[functions.create-razorpay-order]
-verify_jwt = false
-
-[functions.razorpay-webhook]
-verify_jwt = false
-
-[functions.check-subscription]
-verify_jwt = false
-
-[functions.elevenlabs-scribe-token]
-verify_jwt = true
-
-[functions.create-ccavenue-order]
-verify_jwt = false
-
-[functions.ccavenue-webhook]
-verify_jwt = false
-
-[functions.parse-pdf]
-verify_jwt = false
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.ccavenue-webhook]
+    verify_jwt = false
+  [functions.chat]
+    verify_jwt = false
+  [functions.check-subscription]
+    verify_jwt = false
+  [functions.create-ccavenue-order]
+    verify_jwt = false
+  [functions.create-razorpay-order]
+    verify_jwt = false
+  [functions.elevenlabs-scribe-token]
+    verify_jwt = true
+  [functions.parse-pdf]
+    verify_jwt = false
+  [functions.razorpay-webhook]
+    verify_jwt = false
