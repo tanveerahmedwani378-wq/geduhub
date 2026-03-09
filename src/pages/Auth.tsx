@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Loader2, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Mail, Loader2, ArrowRight, ShieldCheck, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -9,8 +9,9 @@ import geduhubLogo from '@/assets/geduhub-logo.png';
 const Auth: React.FC = () => {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const [step, setStep] = useState<'email' | 'otp' | 'magic-link-sent'>('email');
   const [loading, setLoading] = useState(false);
+  const [useOtp, setUseOtp] = useState(true);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,19 +22,33 @@ const Auth: React.FC = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-      });
-
-      if (error) {
-        toast.error(error.message);
-        return;
+      if (useOtp) {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: email.trim().toLowerCase(),
+        });
+        if (error) {
+          // If OTP fails, suggest magic link
+          toast.error('OTP delivery failed. Try using Magic Link instead.');
+          setLoading(false);
+          return;
+        }
+        toast.success('OTP sent to your email! Check your inbox.');
+        setStep('otp');
+      } else {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: email.trim().toLowerCase(),
+          options: { shouldCreateUser: true },
+        });
+        if (error) {
+          toast.error(error.message);
+          setLoading(false);
+          return;
+        }
+        toast.success('Magic link sent! Check your inbox and click the link.');
+        setStep('magic-link-sent');
       }
-
-      toast.success('OTP sent to your email! Check your inbox.');
-      setStep('otp');
     } catch (err) {
-      toast.error('Failed to send OTP. Please try again.');
+      toast.error('Failed to send. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -103,12 +118,16 @@ const Auth: React.FC = () => {
               className="w-20 h-20 rounded-2xl mx-auto mb-4 glow-primary animate-float"
             />
             <h1 className="text-2xl font-bold text-foreground mb-2">
-              {step === 'email' ? 'Welcome to GEDUHub AI' : 'Verify Your Email'}
+              {step === 'email' ? 'Welcome to GEDUHub AI' : step === 'magic-link-sent' ? 'Check Your Inbox' : 'Verify Your Email'}
             </h1>
             <p className="text-muted-foreground text-sm">
               {step === 'email'
-                ? 'Enter your email to get started. We\'ll send you a one-time code.'
-                : `We sent a 6-digit code to ${email}`}
+                ? useOtp
+                  ? 'Enter your email to get started. We\'ll send you a one-time code.'
+                  : 'Enter your email to get started. We\'ll send you a magic link.'
+                : step === 'magic-link-sent'
+                  ? `We sent a magic link to ${email}. Click it to sign in.`
+                  : `We sent a 6-digit code to ${email}`}
             </p>
           </div>
 
@@ -134,16 +153,59 @@ const Auth: React.FC = () => {
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Sending OTP...
+                    {useOtp ? 'Sending OTP...' : 'Sending link...'}
                   </>
                 ) : (
                   <>
-                    Send OTP
+                    {useOtp ? 'Send OTP' : 'Send Magic Link'}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </>
                 )}
               </Button>
+              <button
+                type="button"
+                onClick={() => setUseOtp(!useOtp)}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1.5"
+              >
+                {useOtp ? (
+                  <>
+                    <Link2 className="w-4 h-4" />
+                    Use Magic Link instead
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    Use OTP code instead
+                  </>
+                )}
+              </button>
             </form>
+          ) : step === 'magic-link-sent' ? (
+            <div className="space-y-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <Mail className="w-8 h-8 text-primary" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Didn't receive it? Check your spam folder or try again.
+              </p>
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={() => { setStep('email'); }}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  ← Change email
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={loading}
+                  className="text-primary hover:text-primary/80 font-medium transition-colors"
+                >
+                  {loading ? 'Sending...' : 'Resend link'}
+                </button>
+              </div>
+            </div>
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <div className="relative">
