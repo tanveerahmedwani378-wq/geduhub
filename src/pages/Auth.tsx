@@ -22,19 +22,33 @@ const Auth: React.FC = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-      });
-
-      if (error) {
-        toast.error(error.message);
-        return;
+      if (useOtp) {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: email.trim().toLowerCase(),
+        });
+        if (error) {
+          // If OTP fails, suggest magic link
+          toast.error('OTP delivery failed. Try using Magic Link instead.');
+          setLoading(false);
+          return;
+        }
+        toast.success('OTP sent to your email! Check your inbox.');
+        setStep('otp');
+      } else {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: email.trim().toLowerCase(),
+          options: { shouldCreateUser: true },
+        });
+        if (error) {
+          toast.error(error.message);
+          setLoading(false);
+          return;
+        }
+        toast.success('Magic link sent! Check your inbox and click the link.');
+        setStep('magic-link-sent');
       }
-
-      toast.success('OTP sent to your email! Check your inbox.');
-      setStep('otp');
     } catch (err) {
-      toast.error('Failed to send OTP. Please try again.');
+      toast.error('Failed to send. Please try again.');
     } finally {
       setLoading(false);
     }
