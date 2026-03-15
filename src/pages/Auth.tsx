@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { lovable } from '@/integrations/lovable/index';
 import geduhubLogo from '@/assets/geduhub-logo.png';
 
 const Auth: React.FC = () => {
