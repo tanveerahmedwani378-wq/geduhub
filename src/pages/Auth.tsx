@@ -11,10 +11,8 @@ import geduhubLogo from '@/assets/geduhub-logo.png';
 const Auth: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'email' | 'otp' | 'magic-link-sent'>('email');
+  const [step, setStep] = useState<'email' | 'magic-link-sent'>('email');
   const [loading, setLoading] = useState(false);
-  const [useOtp, setUseOtp] = useState(true);
 
   // Redirect to home if already authenticated
   if (authLoading) {
