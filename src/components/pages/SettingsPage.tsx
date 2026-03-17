@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { PaymentGate } from '@/components/PaymentGate';
@@ -19,6 +20,7 @@ import { toast } from 'sonner';
 
 export const SettingsPage: React.FC = () => {
   const { userProfile } = useChat();
+  const { signOut } = useAuth();
   const [showPaymentGate, setShowPaymentGate] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -193,16 +195,13 @@ export const SettingsPage: React.FC = () => {
           </p>
           <Button
             variant="destructive"
-            onClick={() => {
+            onClick={async () => {
               localStorage.removeItem('geduhub_premium_email');
-              toast.success('Subscription cleared. Refresh the page to see the payment screen.');
-              setTimeout(() => {
-                window.location.reload();
-              }, 1500);
+              await signOut();
             }}
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Clear Subscription & Logout
+            Logout
           </Button>
         </div>
       </div>
