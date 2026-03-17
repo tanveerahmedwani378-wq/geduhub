@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 
 export const SettingsPage: React.FC = () => {
   const { userProfile } = useChat();
+  const { signOut } = useAuth();
   const [showPaymentGate, setShowPaymentGate] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
