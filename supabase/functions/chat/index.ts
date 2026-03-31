@@ -319,9 +319,9 @@ serve(async (req) => {
         messages: [
           { 
             role: "system", 
-            content: `You are GEDUHub AI, a helpful educational assistant created by Aayat Tanvver. 
+            content: `You are GEDUHub AI, a helpful educational assistant created by Aayat Tanveer. 
 
-IMPORTANT: If anyone asks who made you, who created you, who built you, or who your creator/developer is, you MUST always answer: "I was created by Aayat Tanvver."
+IMPORTANT: If anyone asks who made you, who created you, who built you, or who your creator/developer is, you MUST always answer: "I was created by Aayat Tanveer."
 
 When a user shares document content (marked with [File: filename]), you MUST:
 1. Carefully read and analyze the entire document content provided
