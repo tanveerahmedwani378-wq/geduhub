@@ -14,8 +14,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import geduhubLogo from '@/assets/geduhub-chat-logo.png';
 
 interface SidebarProps {
-  currentPage: 'chat' | 'library' | 'settings';
-  onPageChange: (page: 'chat' | 'library' | 'settings') => void;
+  currentPage: 'chat' | 'library' | 'settings' | 'skincare';
+  onPageChange: (page: 'chat' | 'library' | 'settings' | 'skincare') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
