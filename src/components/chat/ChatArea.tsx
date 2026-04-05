@@ -10,11 +10,17 @@ import geduhubChatLogo from '@/assets/geduhub-chat-logo.png';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
-export const ChatArea: React.FC = () => {
+interface ChatAreaProps {
+  initialMessage?: string | null;
+  onInitialMessageConsumed?: () => void;
+}
+
+export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMessageConsumed }) => {
   const { currentConversation, addMessage, userProfile, createConversation, removeLastAssistantMessage, editAndResend } = useChat();
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initialMessageSent = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -23,6 +29,15 @@ export const ChatArea: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [currentConversation?.messages, streamingContent]);
+
+  // Auto-send initial message from skin care topic
+  useEffect(() => {
+    if (initialMessage && !initialMessageSent.current) {
+      initialMessageSent.current = true;
+      handleSend(initialMessage);
+      onInitialMessageConsumed?.();
+    }
+  }, [initialMessage]);
 
   const handleSend = async (content: string, attachments?: Attachment[]) => {
     if (!currentConversation) {

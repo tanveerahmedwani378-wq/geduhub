@@ -138,7 +138,11 @@ const routines: Record<SkinType, { title: string; icon: React.ElementType; descr
   },
 };
 
-export const SkinCarePage: React.FC = () => {
+interface SkinCarePageProps {
+  onStartChat?: (topic: string) => void;
+}
+
+export const SkinCarePage: React.FC<SkinCarePageProps> = ({ onStartChat }) => {
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
@@ -283,7 +287,7 @@ export const SkinCarePage: React.FC = () => {
         {/* Topic Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {skinCareTopics.map((topic) => (
-            <Card key={topic.title} className="hover:shadow-md transition-shadow">
+            <Card key={topic.title} className={`hover:shadow-md transition-shadow ${onStartChat ? 'cursor-pointer' : ''}`} onClick={() => onStartChat?.(`Tell me about ${topic.title.toLowerCase()} in skin care. ${topic.description}`)}>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/10">
