@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/sidebar/Sidebar';
 import { ChatArea } from '@/components/chat/ChatArea';
 import { LibraryPage } from '@/components/pages/LibraryPage';
 import { SettingsPage } from '@/components/pages/SettingsPage';
+import { SkinCarePage } from '@/components/pages/SkinCarePage';
 // Subscription system commented out - users can directly access the dashboard
 // import { PaymentGate } from '@/components/PaymentGate';
 import { Menu, X } from 'lucide-react';
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/button';
 // import { supabase } from '@/integrations/supabase/client';
 
 const AppContent: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings'>('chat');
+  const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings' | 'skincare'>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { selectConversation, setPremium } = useChat();
 
@@ -123,6 +124,7 @@ const AppContent: React.FC = () => {
         {currentPage === 'library' && (
           <LibraryPage onSelectConversation={handleSelectConversation} />
         )}
+        {currentPage === 'skincare' && <SkinCarePage />}
         {currentPage === 'settings' && <SettingsPage />}
       </main>
     </div>

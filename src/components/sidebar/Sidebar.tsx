@@ -6,6 +6,7 @@ import {
   Settings,
   Trash2,
   Crown,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
@@ -13,8 +14,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import geduhubLogo from '@/assets/geduhub-chat-logo.png';
 
 interface SidebarProps {
-  currentPage: 'chat' | 'library' | 'settings';
-  onPageChange: (page: 'chat' | 'library' | 'settings') => void;
+  currentPage: 'chat' | 'library' | 'settings' | 'skincare';
+  onPageChange: (page: 'chat' | 'library' | 'settings' | 'skincare') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
@@ -72,6 +73,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) =
           label="Library"
           active={currentPage === 'library'}
           onClick={() => onPageChange('library')}
+        />
+        <NavButton
+          icon={Sparkles}
+          label="Skin Care"
+          active={currentPage === 'skincare'}
+          onClick={() => onPageChange('skincare')}
         />
         <NavButton
           icon={Settings}
