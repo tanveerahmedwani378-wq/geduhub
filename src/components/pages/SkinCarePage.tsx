@@ -138,7 +138,11 @@ const routines: Record<SkinType, { title: string; icon: React.ElementType; descr
   },
 };
 
-export const SkinCarePage: React.FC = () => {
+interface SkinCarePageProps {
+  onStartChat?: (topic: string) => void;
+}
+
+export const SkinCarePage: React.FC<SkinCarePageProps> = ({ onStartChat }) => {
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);

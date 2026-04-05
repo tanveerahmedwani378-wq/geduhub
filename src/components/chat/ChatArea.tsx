@@ -30,6 +30,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
     scrollToBottom();
   }, [currentConversation?.messages, streamingContent]);
 
+  // Auto-send initial message from skin care topic
+  useEffect(() => {
+    if (initialMessage && !initialMessageSent.current) {
+      initialMessageSent.current = true;
+      handleSend(initialMessage);
+      onInitialMessageConsumed?.();
+    }
+  }, [initialMessage]);
+
   const handleSend = async (content: string, attachments?: Attachment[]) => {
     if (!currentConversation) {
       createConversation();
