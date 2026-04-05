@@ -6,6 +6,7 @@ import {
   Settings,
   Trash2,
   Crown,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
