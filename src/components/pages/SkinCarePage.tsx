@@ -287,7 +287,7 @@ export const SkinCarePage: React.FC<SkinCarePageProps> = ({ onStartChat }) => {
         {/* Topic Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {skinCareTopics.map((topic) => (
-            <Card key={topic.title} className="hover:shadow-md transition-shadow">
+            <Card key={topic.title} className={`hover:shadow-md transition-shadow ${onStartChat ? 'cursor-pointer' : ''}`} onClick={() => onStartChat?.(`Tell me about ${topic.title.toLowerCase()} in skin care. ${topic.description}`)}>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/10">
