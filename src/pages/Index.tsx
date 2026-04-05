@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/sidebar/Sidebar';
 import { ChatArea } from '@/components/chat/ChatArea';
 import { LibraryPage } from '@/components/pages/LibraryPage';
 import { SettingsPage } from '@/components/pages/SettingsPage';
+import { SkinCarePage } from '@/components/pages/SkinCarePage';
 // Subscription system commented out - users can directly access the dashboard
 // import { PaymentGate } from '@/components/PaymentGate';
 import { Menu, X } from 'lucide-react';
