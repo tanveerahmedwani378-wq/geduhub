@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 // import { supabase } from '@/integrations/supabase/client';
 
 const AppContent: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings'>('chat');
+  const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings' | 'skincare'>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { selectConversation, setPremium } = useChat();
 
