@@ -14,7 +14,14 @@ import { Button } from '@/components/ui/button';
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings' | 'skincare'>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { selectConversation, setPremium } = useChat();
+  const [pendingChatMessage, setPendingChatMessage] = useState<string | null>(null);
+  const { selectConversation, setPremium, createConversation } = useChat();
+
+  const handleStartSkinCareChat = (topic: string) => {
+    createConversation();
+    setPendingChatMessage(topic);
+    setCurrentPage('chat');
+  };
 
   // Subscription system commented out - grant premium access directly
   useEffect(() => {
