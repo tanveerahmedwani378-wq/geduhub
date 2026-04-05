@@ -127,7 +127,7 @@ const AppContent: React.FC = () => {
 
       {/* Main content */}
       <main className="flex-1 flex flex-col min-w-0">
-        {currentPage === 'chat' && <ChatArea />}
+        {currentPage === 'chat' && <ChatArea initialMessage={pendingChatMessage} onInitialMessageConsumed={() => setPendingChatMessage(null)} />}
         {currentPage === 'library' && (
           <LibraryPage onSelectConversation={handleSelectConversation} />
         )}
