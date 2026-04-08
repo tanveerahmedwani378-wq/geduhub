@@ -81,6 +81,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) =
           onClick={() => onPageChange('skincare')}
         />
         <NavButton
+          icon={BookOpen}
+          label="Study"
+          active={currentPage === 'study'}
+          onClick={() => onPageChange('study')}
+        />
+        <NavButton
           icon={Settings}
           label="Settings"
           active={currentPage === 'settings'}
