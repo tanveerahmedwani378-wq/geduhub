@@ -8,15 +8,18 @@ import {
   Crown,
   Sparkles,
   BookOpen,
+  Video,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import geduhubLogo from '@/assets/geduhub-chat-logo.png';
 
+type PageType = 'chat' | 'library' | 'settings' | 'skincare' | 'study' | 'video';
+
 interface SidebarProps {
-  currentPage: 'chat' | 'library' | 'settings' | 'skincare' | 'study';
-  onPageChange: (page: 'chat' | 'library' | 'settings' | 'skincare' | 'study') => void;
+  currentPage: PageType;
+  onPageChange: (page: PageType) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
@@ -86,6 +89,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) =
           label="Study"
           active={currentPage === 'study'}
           onClick={() => onPageChange('study')}
+        />
+        <NavButton
+          icon={Video}
+          label="Video Making"
+          active={currentPage === 'video'}
+          onClick={() => onPageChange('video')}
         />
         <NavButton
           icon={Settings}

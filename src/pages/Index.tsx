@@ -6,6 +6,7 @@ import { LibraryPage } from '@/components/pages/LibraryPage';
 import { SettingsPage } from '@/components/pages/SettingsPage';
 import { SkinCarePage } from '@/components/pages/SkinCarePage';
 import { StudyPage } from '@/components/pages/StudyPage';
+import { VideoPage } from '@/components/pages/VideoPage';
 // Subscription system commented out - users can directly access the dashboard
 // import { PaymentGate } from '@/components/PaymentGate';
 import { Menu, X } from 'lucide-react';
@@ -13,7 +14,7 @@ import { Button } from '@/components/ui/button';
 // import { supabase } from '@/integrations/supabase/client';
 
 const AppContent: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings' | 'skincare' | 'study'>('chat');
+  const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings' | 'skincare' | 'study' | 'video'>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [pendingChatMessage, setPendingChatMessage] = useState<string | null>(null);
   const { selectConversation, setPremium, createConversation } = useChat();
@@ -134,6 +135,7 @@ const AppContent: React.FC = () => {
         )}
         {currentPage === 'skincare' && <SkinCarePage onStartChat={handleStartSkinCareChat} />}
         {currentPage === 'study' && <StudyPage onStartChat={handleStartSkinCareChat} />}
+        {currentPage === 'video' && <VideoPage onStartChat={handleStartSkinCareChat} />}
         {currentPage === 'settings' && <SettingsPage />}
       </main>
     </div>
