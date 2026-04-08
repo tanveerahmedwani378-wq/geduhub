@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 // import { supabase } from '@/integrations/supabase/client';
 
 const AppContent: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings' | 'skincare' | 'study'>('chat');
+  const [currentPage, setCurrentPage] = useState<'chat' | 'library' | 'settings' | 'skincare' | 'study' | 'video'>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [pendingChatMessage, setPendingChatMessage] = useState<string | null>(null);
   const { selectConversation, setPremium, createConversation } = useChat();
