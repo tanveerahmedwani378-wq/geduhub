@@ -135,6 +135,7 @@ const AppContent: React.FC = () => {
         )}
         {currentPage === 'skincare' && <SkinCarePage onStartChat={handleStartSkinCareChat} />}
         {currentPage === 'study' && <StudyPage onStartChat={handleStartSkinCareChat} />}
+        {currentPage === 'video' && <VideoPage onStartChat={handleStartSkinCareChat} />}
         {currentPage === 'settings' && <SettingsPage />}
       </main>
     </div>
