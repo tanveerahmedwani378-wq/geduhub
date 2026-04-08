@@ -133,6 +133,7 @@ const AppContent: React.FC = () => {
           <LibraryPage onSelectConversation={handleSelectConversation} />
         )}
         {currentPage === 'skincare' && <SkinCarePage onStartChat={handleStartSkinCareChat} />}
+        {currentPage === 'study' && <StudyPage onStartChat={handleStartSkinCareChat} />}
         {currentPage === 'settings' && <SettingsPage />}
       </main>
     </div>
