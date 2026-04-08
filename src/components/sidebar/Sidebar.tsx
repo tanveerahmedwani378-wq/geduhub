@@ -8,6 +8,7 @@ import {
   Crown,
   Sparkles,
   BookOpen,
+  Video,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
