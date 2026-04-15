@@ -237,6 +237,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
           </div>
         )}
 
+        {message.attachments && message.attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {message.attachments.map(attachment => (
               <div
