@@ -228,7 +228,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
                 document.body.removeChild(a);
                 toast.success('Video downloaded!');
               }}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+              className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground"
               size="sm"
             >
               <Film className="w-4 h-4 mr-2" />
