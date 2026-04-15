@@ -47,6 +47,9 @@ export const VideoPage: React.FC<VideoPageProps> = ({ onStartChat }) => {
             );
           })}
         </div>
+
+        {/* Slideshow Video Maker */}
+        <SlideshowMaker />
       </div>
     </div>
   );
