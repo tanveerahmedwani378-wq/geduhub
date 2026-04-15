@@ -1,5 +1,6 @@
 import React from 'react';
 import { Video, Film, Clapperboard, Camera, Palette, Music, Wand2, Layers } from 'lucide-react';
+import { SlideshowMaker } from '@/components/video/SlideshowMaker';
 
 interface VideoPageProps {
   onStartChat: (topic: string) => void;
