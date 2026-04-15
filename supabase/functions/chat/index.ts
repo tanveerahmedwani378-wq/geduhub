@@ -16,9 +16,25 @@ const imageKeywords = [
   'generate a', 'create a visual', 'make me a', 'generate me'
 ];
 
+// Keywords that suggest video generation request
+const videoKeywords = [
+  'generate video', 'create video', 'make video', 'generate a video', 'create a video',
+  'make a video', 'video of', 'animate', 'make animation', 'create animation',
+  'generate animation', 'video about', 'make me a video', 'create a clip',
+  'generate a clip', 'make a clip', 'video clip', 'short video', 'create a short',
+  'make a short', 'film of', 'create a film', 'motion video'
+];
+
 function isImageRequest(message: string): boolean {
   const lowerMessage = message.toLowerCase();
+  // Don't match as image if it's a video request
+  if (isVideoRequest(message)) return false;
   return imageKeywords.some(keyword => lowerMessage.includes(keyword));
+}
+
+function isVideoRequest(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+  return videoKeywords.some(keyword => lowerMessage.includes(keyword));
 }
 
 // Input validation
