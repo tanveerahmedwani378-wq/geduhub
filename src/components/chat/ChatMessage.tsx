@@ -215,7 +215,28 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
           </div>
         )}
 
-        {message.attachments && message.attachments.length > 0 && (
+        {/* Video download button */}
+        {message.videoUrl && (
+          <div className="mt-3">
+            <Button
+              onClick={() => {
+                const a = document.createElement('a');
+                a.href = message.videoUrl!;
+                a.download = `generated-video-${message.id.slice(0, 8)}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                toast.success('Video downloaded!');
+              }}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+              size="sm"
+            >
+              <Film className="w-4 h-4 mr-2" />
+              Download Video
+            </Button>
+          </div>
+        )}
+
           <div className="flex flex-wrap gap-2 mt-2">
             {message.attachments.map(attachment => (
               <div
