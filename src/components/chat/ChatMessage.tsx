@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Copy, Check, Download, User, Sparkles, Pencil, X, RefreshCw, FileText, Presentation, Send } from 'lucide-react';
+import { Copy, Check, Download, User, Sparkles, Pencil, X, RefreshCw, FileText, Presentation, Send, Film } from 'lucide-react';
 import { Message } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
