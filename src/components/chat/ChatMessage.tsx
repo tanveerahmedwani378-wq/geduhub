@@ -145,7 +145,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
               {message.content.replace(/!\[Generated Image\]\([^)]+\)/g, '')}
             </div>
           ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 [&>p]:mb-4 [&>ul]:mb-4 [&>ol]:mb-4 [&>h1]:mb-3 [&>h2]:mb-3 [&>h3]:mb-2 [&>h1]:mt-5 [&>h2]:mt-4 [&>h3]:mt-3 [&>p+p]:mt-4 [&>blockquote]:mb-4 [&>pre]:mb-4 leading-relaxed">
               <ReactMarkdown>{message.content.replace(/!\[Generated Image\]\([^)]+\)/g, '')}</ReactMarkdown>
             </div>
           )}
