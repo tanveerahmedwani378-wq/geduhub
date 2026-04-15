@@ -5,6 +5,7 @@ export interface Message {
   timestamp: Date;
   attachments?: Attachment[];
   images?: string[];
+  videoUrl?: string;
 }
 
 export interface Attachment {

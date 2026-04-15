@@ -6,6 +6,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { Attachment, Message } from '@/types/chat';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { createVideoFromImage, downloadVideo } from '@/lib/videoCompiler';
 import geduhubChatLogo from '@/assets/geduhub-chat-logo.png';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -95,7 +96,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
 
       const contentType = response.headers.get('content-type');
       
-      // Check if it's an image response (JSON, not streaming)
+      // Check if it's an image/video response (JSON, not streaming)
       if (contentType?.includes('application/json')) {
         const data = await response.json();
         
@@ -114,6 +115,42 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
             content: messageContent,
             images: data.images,
           });
+          setStreamingContent('');
+          setIsLoading(false);
+          return;
+        }
+
+        if (data.type === 'video') {
+          // Handle video generation response
+          const imageUrl = data.images?.[0];
+          if (imageUrl) {
+            setStreamingContent('🎬 Generating your video... This may take a few seconds.');
+            try {
+              const effects = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right'] as const;
+              const effect = effects[Math.floor(Math.random() * effects.length)];
+              const videoBlob = await createVideoFromImage(imageUrl, 5, effect);
+              const videoUrl = URL.createObjectURL(videoBlob);
+              
+              addMessage({
+                role: 'assistant',
+                content: `${data.content || "Here's your generated video:"}\n\n🎬 Your video is ready! Click the button below to download it.`,
+                images: data.images,
+                videoUrl,
+              });
+            } catch (videoErr) {
+              console.error('Video compilation error:', videoErr);
+              addMessage({
+                role: 'assistant',
+                content: `${data.content || "I generated the scene for your video:"}\n\n⚠️ Video compilation failed, but here's the scene image:`,
+                images: data.images,
+              });
+            }
+          } else {
+            addMessage({
+              role: 'assistant',
+              content: data.content || "Sorry, I couldn't generate the video scene. Please try again.",
+            });
+          }
           setStreamingContent('');
           setIsLoading(false);
           return;

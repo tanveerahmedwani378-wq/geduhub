@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Copy, Check, Download, User, Sparkles, Pencil, X, RefreshCw, FileText, Presentation, Send } from 'lucide-react';
+import { Copy, Check, Download, User, Sparkles, Pencil, X, RefreshCw, FileText, Presentation, Send, Film } from 'lucide-react';
 import { Message } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -212,6 +212,28 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate,
                 </Button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Video download button */}
+        {message.videoUrl && (
+          <div className="mt-3">
+            <Button
+              onClick={() => {
+                const a = document.createElement('a');
+                a.href = message.videoUrl!;
+                a.download = `generated-video-${message.id.slice(0, 8)}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                toast.success('Video downloaded!');
+              }}
+              className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground"
+              size="sm"
+            >
+              <Film className="w-4 h-4 mr-2" />
+              Download Video
+            </Button>
           </div>
         )}
 

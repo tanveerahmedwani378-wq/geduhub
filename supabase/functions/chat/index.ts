@@ -16,9 +16,25 @@ const imageKeywords = [
   'generate a', 'create a visual', 'make me a', 'generate me'
 ];
 
+// Keywords that suggest video generation request
+const videoKeywords = [
+  'generate video', 'create video', 'make video', 'generate a video', 'create a video',
+  'make a video', 'video of', 'animate', 'make animation', 'create animation',
+  'generate animation', 'video about', 'make me a video', 'create a clip',
+  'generate a clip', 'make a clip', 'video clip', 'short video', 'create a short',
+  'make a short', 'film of', 'create a film', 'motion video'
+];
+
 function isImageRequest(message: string): boolean {
   const lowerMessage = message.toLowerCase();
+  // Don't match as image if it's a video request
+  if (isVideoRequest(message)) return false;
   return imageKeywords.some(keyword => lowerMessage.includes(keyword));
+}
+
+function isVideoRequest(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+  return videoKeywords.some(keyword => lowerMessage.includes(keyword));
 }
 
 // Input validation
@@ -216,13 +232,97 @@ serve(async (req) => {
 
     const lastMessage = messages[messages.length - 1];
     const isImageGen = lastMessage?.role === 'user' && isImageRequest(lastMessage.content);
+    const isVideoGen = lastMessage?.role === 'user' && isVideoRequest(lastMessage.content);
 
     console.log("Processing chat request:", { 
       messageCount: messages.length, 
       isImageGen,
+      isVideoGen,
       userEmail: userEmail ? `${userEmail.substring(0, 3)}***` : 'anonymous',
       lastMessageLength: lastMessage?.content?.length
     });
+
+    // Video generation: generate a scene image, client will animate it into video
+    if (isVideoGen) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 55000);
+      
+      try {
+        // Generate a cinematic scene image for the video
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-image",
+            messages: [
+              { 
+                role: "system", 
+                content: "Generate a cinematic, wide-angle, high-quality scene image based on the user's video description. Make it visually stunning and suitable for a video. Keep text response to just a short description of the scene." 
+              },
+              { role: "user", content: lastMessage.content }
+            ],
+            modalities: ["image", "text"]
+          }),
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("AI gateway error for video gen:", response.status, errorText);
+          
+          if (response.status === 429) {
+            return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+              status: 429,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          if (response.status === 402) {
+            return new Response(JSON.stringify({ error: "Payment required. Please add credits to continue." }), {
+              status: 402,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          
+          return new Response(JSON.stringify({ error: "Video generation failed" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const data = await response.json();
+        console.log("Video scene generation response received");
+
+        const choice = data.choices?.[0]?.message;
+        const textContent = choice?.content || "Here's your generated video:";
+        const images = choice?.images || [];
+        
+        const imageUrls = images.map((img: Record<string, unknown>) => {
+          if (typeof img === 'string') return img;
+          const imgUrl = img as { image_url?: { url?: string }; url?: string };
+          return imgUrl.image_url?.url || imgUrl.url || null;
+        }).filter(Boolean);
+
+        return new Response(JSON.stringify({ 
+          type: 'video',
+          content: textContent,
+          images: imageUrls
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (abortError) {
+        clearTimeout(timeout);
+        console.error("Video generation timed out:", abortError);
+        return new Response(JSON.stringify({ error: "Video generation timed out. Please try again." }), {
+          status: 504,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     if (isImageGen) {
       // Use image generation model via chat completions
