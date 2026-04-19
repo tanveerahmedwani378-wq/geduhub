@@ -346,6 +346,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
       case 'image':
         setInput('Generate an image of ');
         break;
+      case 'video':
+        setInput('Generate a video of ');
+        break;
       case 'analyze':
         setInput('Analyze this image and describe what you see: ');
         toast.info('Attach an image to analyze');
