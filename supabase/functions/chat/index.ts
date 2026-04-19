@@ -257,11 +257,11 @@ serve(async (req) => {
           },
           signal: controller.signal,
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash-image",
+            model: "google/gemini-3-pro-image-preview",
             messages: [
               { 
                 role: "system", 
-                content: "Generate a cinematic, wide-angle, high-quality scene image based on the user's video description. Make it visually stunning and suitable for a video. Keep text response to just a short description of the scene." 
+                content: "Generate a single cinematic, wide-angle, 3D-rendered scene image for a video. CRITICAL: Make it look like a 3D rendered scene with strong depth, clear foreground/midground/background separation, dramatic lighting, depth of field, and Pixar/Unreal Engine style realism. The image will be turned into a 3D animated video, so depth cues matter most. Keep your text response to one short sentence describing the scene." 
               },
               { role: "user", content: lastMessage.content }
             ],

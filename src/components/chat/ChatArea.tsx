@@ -6,7 +6,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { Attachment, Message } from '@/types/chat';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { createVideoFromImage, downloadVideo } from '@/lib/videoCompiler';
+import { create3DVideoFromImage } from '@/lib/video3d';
 import geduhubChatLogo from '@/assets/geduhub-chat-logo.png';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -121,19 +121,33 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
         }
 
         if (data.type === 'video') {
-          // Handle video generation response
+          // Handle video generation response — build a 3D scene + ElevenLabs audio
           const imageUrl = data.images?.[0];
           if (imageUrl) {
-            setStreamingContent('🎬 Generating your video... This may take a few seconds.');
+            setStreamingContent('🎬 Composing your 3D video with sound... This takes ~15s.');
             try {
-              const effects = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right'] as const;
-              const effect = effects[Math.floor(Math.random() * effects.length)];
-              const videoBlob = await createVideoFromImage(imageUrl, 5, effect);
+              // Fetch matching SFX + music in parallel with image load
+              const audioPromise = supabase.functions
+                .invoke('video-audio', {
+                  body: { scene: content.slice(0, 400), duration: 6 },
+                })
+                .then((r) => r.data as { sfxUrl?: string; musicUrl?: string } | null)
+                .catch((e) => {
+                  console.warn('Audio gen failed, video will be silent:', e);
+                  return null;
+                });
+
+              const audio = await audioPromise;
+              const videoBlob = await create3DVideoFromImage(imageUrl, {
+                durationSec: 6,
+                sfxUrl: audio?.sfxUrl ?? null,
+                musicUrl: audio?.musicUrl ?? null,
+              });
               const videoUrl = URL.createObjectURL(videoBlob);
-              
+
               addMessage({
                 role: 'assistant',
-                content: `${data.content || "Here's your generated video:"}\n\n🎬 Your video is ready! Click the button below to download it.`,
+                content: `${data.content || "Here's your 3D video:"}\n\n🎬 Your 3D video with sound is ready! Click the button below to download it.`,
                 images: data.images,
                 videoUrl,
               });
