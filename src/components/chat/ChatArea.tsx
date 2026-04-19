@@ -6,7 +6,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { Attachment, Message } from '@/types/chat';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { createVideoFromImage, downloadVideo } from '@/lib/videoCompiler';
+import { create3DVideoFromImage } from '@/lib/video3d';
 import geduhubChatLogo from '@/assets/geduhub-chat-logo.png';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
