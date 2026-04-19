@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff, Plus, X, Loader2, Image, FileText, Brain, Search, MoreHorizontal, Camera } from 'lucide-react';
+import { Send, Mic, MicOff, Plus, X, Loader2, Image, FileText, Brain, Search, MoreHorizontal, Camera, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { Attachment } from '@/types/chat';
@@ -346,6 +346,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
       case 'image':
         setInput('Generate an image of ');
         break;
+      case 'video':
+        setInput('Generate a video of ');
+        break;
       case 'analyze':
         setInput('Analyze this image and describe what you see: ');
         toast.info('Attach an image to analyze');
@@ -424,6 +427,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
             <DropdownMenuItem onClick={() => handleFeatureClick('image')}>
               <Image className="w-4 h-4 mr-2" />
               Create image
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleFeatureClick('video')}>
+              <Video className="w-4 h-4 mr-2" />
+              Create video
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleFeatureClick('analyze')}>
               <Search className="w-4 h-4 mr-2" />
