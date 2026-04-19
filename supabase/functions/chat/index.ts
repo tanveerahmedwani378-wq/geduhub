@@ -338,11 +338,11 @@ serve(async (req) => {
           },
           signal: controller.signal,
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash-image",
+            model: "google/gemini-3-pro-image-preview",
             messages: [
               { 
                 role: "system", 
-                content: "Generate an image based on the user's description. Keep text response very brief." 
+                content: "Generate a high-quality, photorealistic, highly detailed image based on the user's description. Use rich colors, sharp focus, professional composition, and natural lighting. Keep text response very brief." 
               },
               { role: "user", content: lastMessage.content }
             ],
