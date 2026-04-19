@@ -19,3 +19,5 @@ project_id = "mxfruxtrsqdehvatuihj"
     verify_jwt = false
   [functions.razorpay-webhook]
     verify_jwt = false
+  [functions.video-audio]
+    verify_jwt = false
