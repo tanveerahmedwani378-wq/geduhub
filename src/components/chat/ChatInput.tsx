@@ -428,6 +428,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
               <Image className="w-4 h-4 mr-2" />
               Create image
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleFeatureClick('video')}>
+              <Video className="w-4 h-4 mr-2" />
+              Create video
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleFeatureClick('analyze')}>
               <Search className="w-4 h-4 mr-2" />
               Analyze image
