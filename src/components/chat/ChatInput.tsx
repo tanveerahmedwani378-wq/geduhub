@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff, Plus, X, Loader2, Image, FileText, Brain, Search, MoreHorizontal, Camera } from 'lucide-react';
+import { Send, Mic, MicOff, Plus, X, Loader2, Image, FileText, Brain, Search, MoreHorizontal, Camera, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { Attachment } from '@/types/chat';
