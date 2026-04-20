@@ -232,9 +232,8 @@ export async function create3DVideoFromImage(
   const videoStream = canvas.captureStream(FPS);
   const combined = new MediaStream();
   videoStream.getVideoTracks().forEach((t) => combined.addTrack(t));
-  if (audioBuffers.length > 0) {
-    dest.stream.getAudioTracks().forEach((t) => combined.addTrack(t));
-  }
+  // Always attach the audio destination — either AI buffers OR synth fallback feed it.
+  dest.stream.getAudioTracks().forEach((t) => combined.addTrack(t));
 
   // Pick best supported codec
   const candidates = [
@@ -263,7 +262,7 @@ export async function create3DVideoFromImage(
 
   recorder.start(100);
 
-  // Start audio sources slightly after recorder
+  // Start AI audio buffer sources
   const startAt = audioCtx.currentTime + 0.05;
   audioBuffers.forEach(({ buf, gain }) => {
     const src = audioCtx.createBufferSource();
@@ -271,12 +270,21 @@ export async function create3DVideoFromImage(
     src.loop = buf.duration < duration;
     const g = audioCtx.createGain();
     g.gain.value = gain;
-    // Fade out near the end
     g.gain.setValueAtTime(gain, startAt + duration - 0.6);
     g.gain.linearRampToValueAtTime(0, startAt + duration);
     src.connect(g).connect(dest);
     src.start(startAt);
     src.stop(startAt + duration + 0.05);
+  });
+
+  // Start synthesized fallback nodes (when AI audio unavailable)
+  synthNodes.forEach((n) => {
+    try {
+      n.start(startAt);
+      n.stop(startAt + duration + 0.05);
+    } catch (e) {
+      console.warn('synth node start failed', e);
+    }
   });
 
   // --- Animation loop ---
