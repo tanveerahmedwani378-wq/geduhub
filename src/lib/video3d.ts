@@ -167,13 +167,73 @@ export async function create3DVideoFromImage(
     if (b) audioBuffers.push({ buf: b, gain: 0.45 });
   }
 
+  // Synthesized fallback nodes — guarantees the video always has sound
+  // even when the AI audio service is unavailable.
+  type SynthNode = {
+    start: (t: number) => void;
+    stop: (t: number) => void;
+    connect: (n: AudioNode) => void;
+  };
+  const synthNodes: SynthNode[] = [];
+  if (audioBuffers.length === 0) {
+    console.info('[video3d] No AI audio — using synthesized cinematic pad + ambient noise.');
+
+    // 1) Soft cinematic pad: layered detuned sine/triangle oscillators (C minor 9 chord)
+    const padFreqs = [130.81, 196.0, 233.08, 311.13, 392.0]; // C3, G3, A#3, D#4, G4
+    const padGain = audioCtx.createGain();
+    padGain.gain.value = 0;
+    padFreqs.forEach((f, i) => {
+      const osc = audioCtx.createOscillator();
+      osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.value = f;
+      osc.detune.value = (Math.random() - 0.5) * 8;
+      const og = audioCtx.createGain();
+      og.gain.value = 0.12 / padFreqs.length;
+      osc.connect(og).connect(padGain);
+      synthNodes.push({
+        start: (t) => osc.start(t),
+        stop: (t) => osc.stop(t),
+        connect: () => {/* routed via padGain */},
+      });
+    });
+    padGain.connect(dest);
+    // Envelope
+    padGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    padGain.gain.linearRampToValueAtTime(0.6, audioCtx.currentTime + 1.2);
+
+    // 2) Ambient noise SFX bed (filtered white noise)
+    const noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
+    const noiseData = noiseBuf.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) {
+      noiseData[i] = (Math.random() * 2 - 1) * 0.5;
+    }
+    const noiseSrc = audioCtx.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+    const noiseFilter = audioCtx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.value = 600;
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.value = 0.18;
+    noiseSrc.connect(noiseFilter).connect(noiseGain).connect(dest);
+    synthNodes.push({
+      start: (t) => noiseSrc.start(t),
+      stop: (t) => noiseSrc.stop(t),
+      connect: () => {/* routed */},
+    });
+
+    // Fade-out tail
+    padGain.gain.setValueAtTime(0.6, audioCtx.currentTime + duration - 0.8);
+    padGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+    noiseGain.gain.setValueAtTime(0.18, audioCtx.currentTime + duration - 0.8);
+    noiseGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+  }
+
   // --- Combined stream (video + audio) ---
   const videoStream = canvas.captureStream(FPS);
   const combined = new MediaStream();
   videoStream.getVideoTracks().forEach((t) => combined.addTrack(t));
-  if (audioBuffers.length > 0) {
-    dest.stream.getAudioTracks().forEach((t) => combined.addTrack(t));
-  }
+  // Always attach the audio destination — either AI buffers OR synth fallback feed it.
+  dest.stream.getAudioTracks().forEach((t) => combined.addTrack(t));
 
   // Pick best supported codec
   const candidates = [
@@ -202,7 +262,7 @@ export async function create3DVideoFromImage(
 
   recorder.start(100);
 
-  // Start audio sources slightly after recorder
+  // Start AI audio buffer sources
   const startAt = audioCtx.currentTime + 0.05;
   audioBuffers.forEach(({ buf, gain }) => {
     const src = audioCtx.createBufferSource();
@@ -210,12 +270,21 @@ export async function create3DVideoFromImage(
     src.loop = buf.duration < duration;
     const g = audioCtx.createGain();
     g.gain.value = gain;
-    // Fade out near the end
     g.gain.setValueAtTime(gain, startAt + duration - 0.6);
     g.gain.linearRampToValueAtTime(0, startAt + duration);
     src.connect(g).connect(dest);
     src.start(startAt);
     src.stop(startAt + duration + 0.05);
+  });
+
+  // Start synthesized fallback nodes (when AI audio unavailable)
+  synthNodes.forEach((n) => {
+    try {
+      n.start(startAt);
+      n.stop(startAt + duration + 0.05);
+    } catch (e) {
+      console.warn('synth node start failed', e);
+    }
   });
 
   // --- Animation loop ---
