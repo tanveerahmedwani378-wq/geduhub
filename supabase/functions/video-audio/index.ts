@@ -13,7 +13,7 @@ async function generateSfx(
   apiKey: string,
   prompt: string,
   durationSeconds: number
-): Promise<string | null> {
+): Promise<{ url: string | null; error: string | null }> {
   try {
     const r = await fetch(`${ELEVEN}/sound-generation`, {
       method: "POST",
@@ -25,14 +25,18 @@ async function generateSfx(
       }),
     });
     if (!r.ok) {
-      console.error("SFX failed:", r.status, await r.text());
-      return null;
+      const txt = await r.text();
+      console.error("SFX failed:", r.status, txt);
+      return { url: null, error: `SFX ${r.status}: ${txt.slice(0, 200)}` };
     }
     const buf = await r.arrayBuffer();
-    return `data:audio/mpeg;base64,${base64Encode(new Uint8Array(buf))}`;
+    return {
+      url: `data:audio/mpeg;base64,${base64Encode(new Uint8Array(buf))}`,
+      error: null,
+    };
   } catch (e) {
     console.error("SFX error:", e);
-    return null;
+    return { url: null, error: e instanceof Error ? e.message : "sfx error" };
   }
 }
 
@@ -40,7 +44,7 @@ async function generateMusic(
   apiKey: string,
   prompt: string,
   durationMs: number
-): Promise<string | null> {
+): Promise<{ url: string | null; error: string | null }> {
   try {
     const r = await fetch(`${ELEVEN}/music`, {
       method: "POST",
@@ -51,14 +55,18 @@ async function generateMusic(
       }),
     });
     if (!r.ok) {
-      console.error("Music failed:", r.status, await r.text());
-      return null;
+      const txt = await r.text();
+      console.error("Music failed:", r.status, txt);
+      return { url: null, error: `Music ${r.status}: ${txt.slice(0, 200)}` };
     }
     const buf = await r.arrayBuffer();
-    return `data:audio/mpeg;base64,${base64Encode(new Uint8Array(buf))}`;
+    return {
+      url: `data:audio/mpeg;base64,${base64Encode(new Uint8Array(buf))}`,
+      error: null,
+    };
   } catch (e) {
     console.error("Music error:", e);
-    return null;
+    return { url: null, error: e instanceof Error ? e.message : "music error" };
   }
 }
 
@@ -68,32 +76,41 @@ serve(async (req) => {
   }
   try {
     const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "ELEVENLABS_API_KEY not configured" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
     const body = await req.json().catch(() => ({}));
     const scene: string = (body.scene || body.prompt || "ambient cinematic scene").toString().slice(0, 500);
     const duration: number = Math.min(Math.max(Number(body.duration) || 6, 3), 15);
     const wantMusic = body.music !== false;
     const wantSfx = body.sfx !== false;
 
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({
+          sfxUrl: null,
+          musicUrl: null,
+          warning: "ELEVENLABS_API_KEY not configured — client will synthesize fallback audio.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const sfxPrompt = `Ambient sound effects for: ${scene}. Cinematic, immersive, natural atmosphere.`;
     const musicPrompt = `Short cinematic ${duration}-second background score matching this scene: ${scene}. Atmospheric, no vocals, gentle build.`;
 
-    const [sfxUrl, musicUrl] = await Promise.all([
-      wantSfx ? generateSfx(apiKey, sfxPrompt, duration) : Promise.resolve(null),
-      wantMusic ? generateMusic(apiKey, musicPrompt, duration * 1000) : Promise.resolve(null),
+    const [sfxRes, musicRes] = await Promise.all([
+      wantSfx ? generateSfx(apiKey, sfxPrompt, duration) : Promise.resolve({ url: null, error: null }),
+      wantMusic ? generateMusic(apiKey, musicPrompt, duration * 1000) : Promise.resolve({ url: null, error: null }),
     ]);
 
+    const warnings: string[] = [];
+    if (sfxRes.error) warnings.push(sfxRes.error);
+    if (musicRes.error) warnings.push(musicRes.error);
+
     return new Response(
-      JSON.stringify({ sfxUrl, musicUrl }),
+      JSON.stringify({
+        sfxUrl: sfxRes.url,
+        musicUrl: musicRes.url,
+        warning: warnings.length ? warnings.join(" | ") : null,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
