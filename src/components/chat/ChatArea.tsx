@@ -23,6 +23,110 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialMessageSent = useRef(false);
 
+  const addAssistantMessage = (content: string, images?: string[], videoUrl?: string) => {
+    addMessage({
+      role: 'assistant',
+      content,
+      images,
+      videoUrl,
+    });
+  };
+
+  const parseJsonPayload = async (response: Response) => {
+    const rawText = await response.text();
+
+    if (!rawText.trim()) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(rawText);
+    } catch {
+      return { content: rawText };
+    }
+  };
+
+  const handleJsonChatPayload = async (response: Response, content: string) => {
+    const data = await parseJsonPayload(response);
+
+    if (!data) {
+      return false;
+    }
+
+    if (typeof data.error === 'string' && !data.content) {
+      addAssistantMessage(`⚠️ ${data.error}`);
+      return true;
+    }
+
+    if (data.ok === false && typeof data.content === 'string') {
+      addAssistantMessage(data.content, data.images, data.videoUrl);
+      return true;
+    }
+
+    if (data.type === 'image') {
+      let messageContent = data.content || "Here's your generated image:";
+
+      if (data.images && data.images.length > 0) {
+        const imageMarkdown = data.images.map((url: string) => `\n\n![Generated Image](${url})`).join('');
+        messageContent += imageMarkdown;
+      }
+
+      addAssistantMessage(messageContent, data.images);
+      return true;
+    }
+
+    if (data.type === 'video') {
+      const imageUrl = data.images?.[0];
+
+      if (imageUrl) {
+        setStreamingContent('🎬 Composing your 3D video with sound... This takes ~15s.');
+
+        try {
+          const audio = await supabase.functions
+            .invoke('video-audio', {
+              body: { scene: content.slice(0, 400), duration: 6 },
+            })
+            .then((r) => r.data as { sfxUrl?: string; musicUrl?: string } | null)
+            .catch((e) => {
+              console.warn('Audio gen failed, video will be silent:', e);
+              return null;
+            });
+
+          const videoBlob = await create3DVideoFromImage(imageUrl, {
+            durationSec: 6,
+            sfxUrl: audio?.sfxUrl ?? null,
+            musicUrl: audio?.musicUrl ?? null,
+          });
+          const videoUrl = URL.createObjectURL(videoBlob);
+
+          addAssistantMessage(
+            `${data.content || "Here's your 3D video:"}\n\n🎬 Your 3D video with sound is ready! Click the button below to download it.`,
+            data.images,
+            videoUrl,
+          );
+        } catch (videoErr) {
+          console.error('Video compilation error:', videoErr);
+          addAssistantMessage(
+            `${data.content || 'I generated the scene for your video:'}\n\n⚠️ Video compilation failed, but here\'s the scene image:`,
+            data.images,
+          );
+        }
+
+        return true;
+      }
+
+      addAssistantMessage(data.content || "Sorry, I couldn't generate the video scene. Please try again.");
+      return true;
+    }
+
+    if (typeof data.content === 'string') {
+      addAssistantMessage(data.content, data.images, data.videoUrl);
+      return true;
+    }
+
+    return false;
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -105,7 +209,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
+        const errorData = await parseJsonPayload(response);
         const errorMessage = errorData?.error || 'Failed to get response';
         handleApiError(response.status, errorMessage);
         return;
@@ -113,85 +217,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
 
       const contentType = response.headers.get('content-type');
       
-      // Check if it's an image/video response (JSON, not streaming)
-      if (contentType?.includes('application/json')) {
-        const data = await response.json();
-        
-        if (data.type === 'image') {
-          // Handle image generation response
-          let messageContent = data.content || "Here's your generated image:";
-          
-          // Append images as markdown
-          if (data.images && data.images.length > 0) {
-            const imageMarkdown = data.images.map((url: string) => `\n\n![Generated Image](${url})`).join('');
-            messageContent += imageMarkdown;
-          }
-          
-          addMessage({
-            role: 'assistant',
-            content: messageContent,
-            images: data.images,
-          });
-          setStreamingContent('');
-          setIsLoading(false);
-          return;
-        }
-
-        if (data.type === 'video') {
-          // Handle video generation response — build a 3D scene + ElevenLabs audio
-          const imageUrl = data.images?.[0];
-          if (imageUrl) {
-            setStreamingContent('🎬 Composing your 3D video with sound... This takes ~15s.');
-            try {
-              // Fetch matching SFX + music in parallel with image load
-              const audioPromise = supabase.functions
-                .invoke('video-audio', {
-                  body: { scene: content.slice(0, 400), duration: 6 },
-                })
-                .then((r) => r.data as { sfxUrl?: string; musicUrl?: string } | null)
-                .catch((e) => {
-                  console.warn('Audio gen failed, video will be silent:', e);
-                  return null;
-                });
-
-              const audio = await audioPromise;
-              const videoBlob = await create3DVideoFromImage(imageUrl, {
-                durationSec: 6,
-                sfxUrl: audio?.sfxUrl ?? null,
-                musicUrl: audio?.musicUrl ?? null,
-              });
-              const videoUrl = URL.createObjectURL(videoBlob);
-
-              addMessage({
-                role: 'assistant',
-                content: `${data.content || "Here's your 3D video:"}\n\n🎬 Your 3D video with sound is ready! Click the button below to download it.`,
-                images: data.images,
-                videoUrl,
-              });
-            } catch (videoErr) {
-              console.error('Video compilation error:', videoErr);
-              addMessage({
-                role: 'assistant',
-                content: `${data.content || "I generated the scene for your video:"}\n\n⚠️ Video compilation failed, but here's the scene image:`,
-                images: data.images,
-              });
-            }
-          } else {
-            addMessage({
-              role: 'assistant',
-              content: data.content || "Sorry, I couldn't generate the video scene. Please try again.",
-            });
-          }
-          setStreamingContent('');
-          setIsLoading(false);
-          return;
-        }
-
-        if (typeof data.content === 'string') {
-          addMessage({
-            role: 'assistant',
-            content: data.content,
-          });
+      if (contentType?.includes('application/json') || contentType?.includes('text/plain')) {
+        const handled = await handleJsonChatPayload(response, content);
+        if (handled) {
           setStreamingContent('');
           setIsLoading(false);
           return;
@@ -238,10 +266,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
 
       // Add the complete assistant message
       if (fullResponse) {
-        addMessage({
-          role: 'assistant',
-          content: fullResponse,
-        });
+        addAssistantMessage(fullResponse);
+      } else {
+        addAssistantMessage('⚠️ I could not generate a readable reply. Please try again.');
       }
       setStreamingContent('');
     } catch (error) {
@@ -295,7 +322,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
+        const errorData = await parseJsonPayload(response);
         const errorMessage = errorData?.error || 'Failed to get response';
         handleApiError(response.status, errorMessage);
         return;
@@ -303,31 +330,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
 
       const contentType = response.headers.get('content-type');
       
-      if (contentType?.includes('application/json')) {
-        const data = await response.json();
-        if (data.type === 'image') {
-          let messageContent = data.content || "Here's your generated image:";
-          if (data.images && data.images.length > 0) {
-            const imageMarkdown = data.images.map((url: string) => `
-
-![Generated Image](${url})`).join('');
-            messageContent += imageMarkdown;
-          }
-          addMessage({
-            role: 'assistant',
-            content: messageContent,
-            images: data.images,
-          });
-          setStreamingContent('');
-          setIsLoading(false);
-          return;
-        }
-
-        if (typeof data.content === 'string') {
-          addMessage({
-            role: 'assistant',
-            content: data.content,
-          });
+      if (contentType?.includes('application/json') || contentType?.includes('text/plain')) {
+        const handled = await handleJsonChatPayload(response, content);
+        if (handled) {
           setStreamingContent('');
           setIsLoading(false);
           return;
@@ -372,10 +377,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
       }
 
       if (fullResponse) {
-        addMessage({
-          role: 'assistant',
-          content: fullResponse,
-        });
+        addAssistantMessage(fullResponse);
+      } else {
+        addAssistantMessage('⚠️ I could not generate a readable reply. Please try again.');
       }
       setStreamingContent('');
     } catch (error) {
@@ -413,7 +417,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
+        const errorData = await parseJsonPayload(response);
         const errorMessage = errorData?.error || 'Failed to get response';
         handleApiError(response.status, errorMessage);
         return;
@@ -421,31 +425,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
 
       const contentType = response.headers.get('content-type');
       
-      if (contentType?.includes('application/json')) {
-        const data = await response.json();
-        if (data.type === 'image') {
-          let messageContent = data.content || "Here's your generated image:";
-          if (data.images && data.images.length > 0) {
-            const imageMarkdown = data.images.map((url: string) => `
-
-![Generated Image](${url})`).join('');
-            messageContent += imageMarkdown;
-          }
-          addMessage({
-            role: 'assistant',
-            content: messageContent,
-            images: data.images,
-          });
-          setStreamingContent('');
-          setIsLoading(false);
-          return;
-        }
-
-        if (typeof data.content === 'string') {
-          addMessage({
-            role: 'assistant',
-            content: data.content,
-          });
+      if (contentType?.includes('application/json') || contentType?.includes('text/plain')) {
+        const handled = await handleJsonChatPayload(response, content);
+        if (handled) {
           setStreamingContent('');
           setIsLoading(false);
           return;
@@ -490,10 +472,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
       }
 
       if (fullResponse) {
-        addMessage({
-          role: 'assistant',
-          content: fullResponse,
-        });
+        addAssistantMessage(fullResponse);
+      } else {
+        addAssistantMessage('⚠️ I could not generate a readable reply. Please try again.');
       }
       setStreamingContent('');
     } catch (error) {
