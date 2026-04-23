@@ -6,6 +6,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+function userFacingError(content: string, error = content): Response {
+  return jsonResponse({
+    ok: false,
+    type: 'error',
+    content,
+    error,
+  });
+}
+
 // Keywords that suggest image generation request
 const imageKeywords = [
   'generate image', 'create image', 'make image', 'draw', 'generate a picture',
@@ -201,12 +217,10 @@ serve(async (req) => {
       if (!isPremium && userEmail) {
         // Check rate limit for free users
         if (!checkFreeUserRateLimit(userEmail)) {
-          return new Response(JSON.stringify({ 
-            error: "Free message limit reached. Please upgrade to premium for unlimited access." 
-          }), {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return userFacingError(
+            "⚠️ Free message limit reached for this account. Please try again later.",
+            "Free message limit reached. Please upgrade to premium for unlimited access.",
+          );
         }
       }
     } else {
@@ -214,12 +228,10 @@ serve(async (req) => {
       // Use IP-based limiting for anonymous users
       const clientIp = req.headers.get('x-forwarded-for') || 'unknown';
       if (!checkFreeUserRateLimit(`anon_${clientIp}`)) {
-        return new Response(JSON.stringify({ 
-          error: "Rate limit reached. Please sign in for more access." 
-        }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return userFacingError(
+          "⚠️ Rate limit reached. Please sign in and try again in a moment.",
+          "Rate limit reached. Please sign in for more access.",
+        );
       }
     }
 
@@ -285,16 +297,16 @@ serve(async (req) => {
           console.error("AI gateway error for image gen:", response.status, errorText);
           
           if (response.status === 429) {
-            return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-              status: 429,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            return userFacingError(
+              "⚠️ I hit a rate limit while generating that image. Please try again in a moment.",
+              "Rate limit exceeded. Please try again later.",
+            );
           }
           if (response.status === 402) {
-            return new Response(JSON.stringify({ error: "Payment required. Please add credits to continue." }), {
-              status: 402,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            return userFacingError(
+              "⚠️ Image generation is unavailable right now because the AI service is out of credits. Please try again later.",
+              "Payment required. Please add credits to continue.",
+            );
           }
           
           return new Response(JSON.stringify({ error: "Image generation failed" }), {
@@ -381,16 +393,16 @@ If someone asks to generate or draw an image, tell them to use phrases like "cre
       console.error("AI gateway error:", response.status, errorText);
       
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return userFacingError(
+          "⚠️ I hit a rate limit while answering that. Please try again in a moment.",
+          "Rate limit exceeded. Please try again later.",
+        );
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required. Please add credits to continue." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return userFacingError(
+          "⚠️ I can’t answer right now because the AI service is out of credits. Please try again later.",
+          "Payment required. Please add credits to continue.",
+        );
       }
       
       return new Response(JSON.stringify({ error: "AI service error" }), {
