@@ -80,18 +80,31 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
 
       if (!response.ok) {
         const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to get response';
         
         // Handle specific error codes
         if (response.status === 402) {
           toast.error('Free message limit reached. Please upgrade to premium for unlimited access.');
+          addMessage({
+            role: 'assistant',
+            content: '⚠️ Video/image generation is unavailable right now because the AI service needs credits. Please try again later.',
+          });
           return;
         }
         if (response.status === 429) {
           toast.error('Rate limit reached. Please wait a moment before trying again.');
+          addMessage({
+            role: 'assistant',
+            content: '⚠️ I hit a rate limit while generating that. Please wait a moment and try again.',
+          });
           return;
         }
         
-        throw new Error(errorData.error || 'Failed to get response');
+        addMessage({
+          role: 'assistant',
+          content: `⚠️ I couldn't complete that request: ${errorMessage}`,
+        });
+        throw new Error(errorMessage);
       }
 
       const contentType = response.headers.get('content-type');
