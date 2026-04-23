@@ -242,86 +242,14 @@ serve(async (req) => {
       lastMessageLength: lastMessage?.content?.length
     });
 
-    // Video generation: generate a scene image, client will animate it into video
+    // Video generation is currently disabled to preserve AI credits.
     if (isVideoGen) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 55000);
-      
-      try {
-        // Generate a cinematic scene image for the video
-        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          signal: controller.signal,
-          body: JSON.stringify({
-            model: "google/gemini-3-pro-image-preview",
-            messages: [
-              { 
-                role: "system", 
-                content: "Generate a single cinematic, wide-angle, 3D-rendered scene image for a video. CRITICAL: Make it look like a 3D rendered scene with strong depth, clear foreground/midground/background separation, dramatic lighting, depth of field, and Pixar/Unreal Engine style realism. The image will be turned into a 3D animated video, so depth cues matter most. Keep your text response to one short sentence describing the scene." 
-              },
-              { role: "user", content: lastMessage.content }
-            ],
-            modalities: ["image", "text"]
-          }),
-        });
-
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("AI gateway error for video gen:", response.status, errorText);
-          
-          if (response.status === 429) {
-            return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-              status: 429,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          if (response.status === 402) {
-            return new Response(JSON.stringify({ error: "Payment required. Please add credits to continue." }), {
-              status: 402,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          
-          return new Response(JSON.stringify({ error: "Video generation failed" }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        const data = await response.json();
-        console.log("Video scene generation response received");
-
-        const choice = data.choices?.[0]?.message;
-        const textContent = choice?.content || "Here's your generated video:";
-        const images = choice?.images || [];
-        
-        const imageUrls = images.map((img: Record<string, unknown>) => {
-          if (typeof img === 'string') return img;
-          const imgUrl = img as { image_url?: { url?: string }; url?: string };
-          return imgUrl.image_url?.url || imgUrl.url || null;
-        }).filter(Boolean);
-
-        return new Response(JSON.stringify({ 
-          type: 'video',
-          content: textContent,
-          images: imageUrls
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      } catch (abortError) {
-        clearTimeout(timeout);
-        console.error("Video generation timed out:", abortError);
-        return new Response(JSON.stringify({ error: "Video generation timed out. Please try again." }), {
-          status: 504,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      return new Response(JSON.stringify({
+        type: 'text',
+        content: "🎬 Video generation is currently disabled. Try asking me to generate an **image** instead — for example: \"Generate an image of a sunset over mountains\".",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (isImageGen) {
