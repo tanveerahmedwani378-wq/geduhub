@@ -27,6 +27,32 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleApiError = (status: number, errorMessage: string) => {
+    if (status === 402) {
+      toast.error('AI credits are unavailable right now. Please try again later.');
+      addMessage({
+        role: 'assistant',
+        content: '⚠️ I can’t respond right now because the AI service is out of credits. Please try again later.',
+      });
+      return;
+    }
+
+    if (status === 429) {
+      toast.error('Rate limit reached. Please wait a moment before trying again.');
+      addMessage({
+        role: 'assistant',
+        content: '⚠️ I hit a rate limit while generating that. Please wait a moment and try again.',
+      });
+      return;
+    }
+
+    toast.error(errorMessage);
+    addMessage({
+      role: 'assistant',
+      content: `⚠️ I couldn't complete that request: ${errorMessage}`,
+    });
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [currentConversation?.messages, streamingContent]);
@@ -79,32 +105,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.error || 'Failed to get response';
-        
-        // Handle specific error codes
-        if (response.status === 402) {
-          toast.error('Free message limit reached. Please upgrade to premium for unlimited access.');
-          addMessage({
-            role: 'assistant',
-            content: '⚠️ Video/image generation is unavailable right now because the AI service needs credits. Please try again later.',
-          });
-          return;
-        }
-        if (response.status === 429) {
-          toast.error('Rate limit reached. Please wait a moment before trying again.');
-          addMessage({
-            role: 'assistant',
-            content: '⚠️ I hit a rate limit while generating that. Please wait a moment and try again.',
-          });
-          return;
-        }
-        
-        addMessage({
-          role: 'assistant',
-          content: `⚠️ I couldn't complete that request: ${errorMessage}`,
-        });
-        throw new Error(errorMessage);
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.error || 'Failed to get response';
+        handleApiError(response.status, errorMessage);
+        return;
       }
 
       const contentType = response.headers.get('content-type');
@@ -178,6 +182,16 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
               content: data.content || "Sorry, I couldn't generate the video scene. Please try again.",
             });
           }
+          setStreamingContent('');
+          setIsLoading(false);
+          return;
+        }
+
+        if (typeof data.content === 'string') {
+          addMessage({
+            role: 'assistant',
+            content: data.content,
+          });
           setStreamingContent('');
           setIsLoading(false);
           return;
@@ -281,16 +295,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 402) {
-          toast.error('Free message limit reached. Please upgrade to premium for unlimited access.');
-          return;
-        }
-        if (response.status === 429) {
-          toast.error('Rate limit reached. Please wait a moment before trying again.');
-          return;
-        }
-        throw new Error(errorData.error || 'Failed to get response');
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.error || 'Failed to get response';
+        handleApiError(response.status, errorMessage);
+        return;
       }
 
       const contentType = response.headers.get('content-type');
@@ -300,13 +308,25 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
         if (data.type === 'image') {
           let messageContent = data.content || "Here's your generated image:";
           if (data.images && data.images.length > 0) {
-            const imageMarkdown = data.images.map((url: string) => `\n\n![Generated Image](${url})`).join('');
+            const imageMarkdown = data.images.map((url: string) => `
+
+![Generated Image](${url})`).join('');
             messageContent += imageMarkdown;
           }
           addMessage({
             role: 'assistant',
             content: messageContent,
             images: data.images,
+          });
+          setStreamingContent('');
+          setIsLoading(false);
+          return;
+        }
+
+        if (typeof data.content === 'string') {
+          addMessage({
+            role: 'assistant',
+            content: data.content,
           });
           setStreamingContent('');
           setIsLoading(false);
@@ -393,16 +413,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 402) {
-          toast.error('Free message limit reached. Please upgrade to premium for unlimited access.');
-          return;
-        }
-        if (response.status === 429) {
-          toast.error('Rate limit reached. Please wait a moment before trying again.');
-          return;
-        }
-        throw new Error(errorData.error || 'Failed to get response');
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.error || 'Failed to get response';
+        handleApiError(response.status, errorMessage);
+        return;
       }
 
       const contentType = response.headers.get('content-type');
@@ -412,13 +426,25 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
         if (data.type === 'image') {
           let messageContent = data.content || "Here's your generated image:";
           if (data.images && data.images.length > 0) {
-            const imageMarkdown = data.images.map((url: string) => `\n\n![Generated Image](${url})`).join('');
+            const imageMarkdown = data.images.map((url: string) => `
+
+![Generated Image](${url})`).join('');
             messageContent += imageMarkdown;
           }
           addMessage({
             role: 'assistant',
             content: messageContent,
             images: data.images,
+          });
+          setStreamingContent('');
+          setIsLoading(false);
+          return;
+        }
+
+        if (typeof data.content === 'string') {
+          addMessage({
+            role: 'assistant',
+            content: data.content,
           });
           setStreamingContent('');
           setIsLoading(false);
