@@ -346,9 +346,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
       case 'image':
         setInput('Generate an image of ');
         break;
-      case 'video':
-        setInput('Generate a video of ');
-        break;
+      // 'video' case removed — video generation disabled
       case 'analyze':
         setInput('Analyze this image and describe what you see: ');
         toast.info('Attach an image to analyze');
@@ -428,10 +426,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
               <Image className="w-4 h-4 mr-2" />
               Create image
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleFeatureClick('video')}>
-              <Video className="w-4 h-4 mr-2" />
-              Create video
-            </DropdownMenuItem>
+            {/* Video creation disabled to preserve AI credits */}
             <DropdownMenuItem onClick={() => handleFeatureClick('analyze')}>
               <Search className="w-4 h-4 mr-2" />
               Analyze image
