@@ -272,105 +272,30 @@ serve(async (req) => {
     }
 
     if (isImageGen) {
-      // Use image generation model via chat completions
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 55000); // 55s timeout
-      
+      // Free image generation via Pollinations.ai — no API key, no limits
       try {
-        let response: Response;
-        let imageUrls: string[] = [];
-        let textContent = "Here's your generated image:";
+        // Strip common trigger phrases to get a cleaner prompt
+        const cleanPrompt = lastMessage.content
+          .replace(/^(please\s+)?(can you\s+)?(generate|create|make|draw|show me|render|design|sketch|paint)\s+(an?\s+|me\s+an?\s+)?(image|picture|photo|illustration|artwork|visual)\s+(of\s+)?/i, '')
+          .replace(/^(image|picture|photo|illustration)\s+of\s+/i, '')
+          .trim();
 
-        if (GEMINI_API_KEY) {
-          // Native Google Generative Language API for image output
-          const imageModel = "gemini-2.5-flash-image";
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${imageModel}:generateContent?key=${GEMINI_API_KEY}`;
-          response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            signal: controller.signal,
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: lastMessage.content }] }],
-              generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-            }),
-          });
+        const prompt = cleanPrompt || lastMessage.content;
+        const seed = Math.floor(Math.random() * 1000000);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true`;
 
-          clearTimeout(timeout);
+        console.log("Generating image via Pollinations:", prompt.slice(0, 80));
 
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Gemini image error:", response.status, errorText);
-            if (response.status === 429) {
-              return userFacingError("⚠️ Rate limit hit on image generation. Try again in a moment.");
-            }
-            return userFacingError("⚠️ Image generation failed. Please try again.", errorText);
-          }
-
-          const data = await response.json();
-          const parts = data.candidates?.[0]?.content?.parts || [];
-          for (const p of parts) {
-            if (p.inlineData?.data) {
-              const mime = p.inlineData.mimeType || "image/png";
-              imageUrls.push(`data:${mime};base64,${p.inlineData.data}`);
-            } else if (p.text) {
-              textContent = p.text;
-            }
-          }
-        } else {
-          response = await fetch(AI_URL, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${AI_KEY}`,
-              "Content-Type": "application/json",
-            },
-            signal: controller.signal,
-            body: JSON.stringify({
-              model: IMAGE_MODEL,
-              messages: [
-                { role: "system", content: "Generate a high-quality, photorealistic image. Keep text response brief." },
-                { role: "user", content: lastMessage.content }
-              ],
-              modalities: ["image", "text"]
-            }),
-          });
-
-          clearTimeout(timeout);
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error("AI gateway error for image gen:", response.status, errorText);
-            if (response.status === 429) return userFacingError("⚠️ Rate limit on image generation.");
-            if (response.status === 402) return userFacingError("⚠️ Out of credits for image generation.");
-            return userFacingError("⚠️ Image generation failed.", errorText);
-          }
-
-          const data = await response.json();
-          const choice = data.choices?.[0]?.message;
-          textContent = choice?.content || textContent;
-          const images = choice?.images || [];
-          imageUrls = images.map((img: Record<string, unknown>) => {
-            if (typeof img === 'string') return img;
-            const imgUrl = img as { image_url?: { url?: string }; url?: string };
-            return imgUrl.image_url?.url || imgUrl.url || null;
-          }).filter(Boolean) as string[];
-        }
-
-        console.log("Extracted image URLs count:", imageUrls.length);
-
-        return new Response(JSON.stringify({ 
+        return new Response(JSON.stringify({
           type: 'image',
-          content: textContent,
-          images: imageUrls
+          content: `Here's your image of **${prompt}**:`,
+          images: [imageUrl],
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      } catch (abortError) {
-        clearTimeout(timeout);
-        console.error("Image generation timed out or aborted:", abortError);
-        return new Response(JSON.stringify({ error: "Image generation timed out. Please try again." }), {
-          status: 504,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      } catch (err) {
+        console.error("Image generation error:", err);
+        return userFacingError("⚠️ Image generation failed. Please try again.");
       }
     }
 
