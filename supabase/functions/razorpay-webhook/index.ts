@@ -104,7 +104,7 @@ serve(async (req) => {
         .from('subscriptions')
         .update({
           razorpay_payment_id: payload.razorpay_payment_id,
-          razorpay_signature: payload.razorpay_signature || 'upi_payment',
+          razorpay_signature: payload.razorpay_signature,
           status: 'active',
           expires_at: expiresAt.toISOString(),
           updated_at: new Date().toISOString()
