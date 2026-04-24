@@ -355,15 +355,13 @@ serve(async (req) => {
     }
 
     // Regular text chat - streaming
-    const response = await fetch(AI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${AI_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: TEXT_MODEL,
-        messages: [
+    const fallbackModels = GEMINI_API_KEY
+      ? [TEXT_MODEL, "gemini-2.5-flash-lite", "gemini-2.0-flash"]
+      : [TEXT_MODEL];
+
+    const buildBody = (model: string) => JSON.stringify({
+      model,
+      messages: [
           { 
             role: "system", 
             content: `You are GEDUHub AI, a helpful educational assistant created by Aayat Tanveer. 
@@ -392,26 +390,47 @@ If someone asks to generate or draw an image, tell them to use phrases like "cre
           ...messages,
         ],
         stream: true,
-      }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
+    let response: Response | null = null;
+    let lastErrorText = "";
+    let lastStatus = 0;
+    for (const model of fallbackModels) {
+      response = await fetch(AI_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${AI_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: buildBody(model),
+      });
+      if (response.ok) break;
+      lastStatus = response.status;
+      lastErrorText = await response.text();
+      console.error(`AI error with ${model}:`, response.status, lastErrorText);
+      // Only fall back on overload/unavailable
+      if (response.status !== 503 && response.status !== 429) break;
+    }
+
+    if (!response || !response.ok) {
+      if (lastStatus === 503) {
         return userFacingError(
-          "⚠️ I hit a rate limit while answering that. Please try again in a moment.",
-          "Rate limit exceeded. Please try again later.",
+          "⚠️ The AI model is temporarily overloaded. Please try again in a moment.",
+          "Model overloaded (503).",
         );
       }
-      if (response.status === 402) {
+      if (lastStatus === 429) {
         return userFacingError(
-          "⚠️ I can’t answer right now because the AI service is out of credits. Please try again later.",
-          "Payment required. Please add credits to continue.",
+          "⚠️ I hit a rate limit. Please try again in a moment.",
+          "Rate limit exceeded.",
         );
       }
-      
+      if (lastStatus === 402) {
+        return userFacingError(
+          "⚠️ The AI service is out of credits. Please try again later.",
+          "Payment required.",
+        );
+      }
       return new Response(JSON.stringify({ error: "AI service error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
