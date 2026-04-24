@@ -277,64 +277,84 @@ serve(async (req) => {
       const timeout = setTimeout(() => controller.abort(), 55000); // 55s timeout
       
       try {
-        const response = await fetch(AI_URL, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${AI_KEY}`,
-            "Content-Type": "application/json",
-          },
-          signal: controller.signal,
-          body: JSON.stringify({
-            model: IMAGE_MODEL,
-            messages: [
-              { 
-                role: "system", 
-                content: "Generate a high-quality, photorealistic, highly detailed image based on the user's description. Use rich colors, sharp focus, professional composition, and natural lighting. Keep text response very brief." 
-              },
-              { role: "user", content: lastMessage.content }
-            ],
-            modalities: ["image", "text"]
-          }),
-        });
+        let response: Response;
+        let imageUrls: string[] = [];
+        let textContent = "Here's your generated image:";
 
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("AI gateway error for image gen:", response.status, errorText);
-          
-          if (response.status === 429) {
-            return userFacingError(
-              "⚠️ I hit a rate limit while generating that image. Please try again in a moment.",
-              "Rate limit exceeded. Please try again later.",
-            );
-          }
-          if (response.status === 402) {
-            return userFacingError(
-              "⚠️ Image generation is unavailable right now because the AI service is out of credits. Please try again later.",
-              "Payment required. Please add credits to continue.",
-            );
-          }
-          
-          return new Response(JSON.stringify({ error: "Image generation failed" }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        if (GEMINI_API_KEY) {
+          // Native Google Generative Language API for image output
+          const imageModel = "gemini-2.5-flash-image";
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${imageModel}:generateContent?key=${GEMINI_API_KEY}`;
+          response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: lastMessage.content }] }],
+              generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+            }),
           });
+
+          clearTimeout(timeout);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Gemini image error:", response.status, errorText);
+            if (response.status === 429) {
+              return userFacingError("⚠️ Rate limit hit on image generation. Try again in a moment.");
+            }
+            return userFacingError("⚠️ Image generation failed. Please try again.", errorText);
+          }
+
+          const data = await response.json();
+          const parts = data.candidates?.[0]?.content?.parts || [];
+          for (const p of parts) {
+            if (p.inlineData?.data) {
+              const mime = p.inlineData.mimeType || "image/png";
+              imageUrls.push(`data:${mime};base64,${p.inlineData.data}`);
+            } else if (p.text) {
+              textContent = p.text;
+            }
+          }
+        } else {
+          response = await fetch(AI_URL, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${AI_KEY}`,
+              "Content-Type": "application/json",
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              model: IMAGE_MODEL,
+              messages: [
+                { role: "system", content: "Generate a high-quality, photorealistic image. Keep text response brief." },
+                { role: "user", content: lastMessage.content }
+              ],
+              modalities: ["image", "text"]
+            }),
+          });
+
+          clearTimeout(timeout);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("AI gateway error for image gen:", response.status, errorText);
+            if (response.status === 429) return userFacingError("⚠️ Rate limit on image generation.");
+            if (response.status === 402) return userFacingError("⚠️ Out of credits for image generation.");
+            return userFacingError("⚠️ Image generation failed.", errorText);
+          }
+
+          const data = await response.json();
+          const choice = data.choices?.[0]?.message;
+          textContent = choice?.content || textContent;
+          const images = choice?.images || [];
+          imageUrls = images.map((img: Record<string, unknown>) => {
+            if (typeof img === 'string') return img;
+            const imgUrl = img as { image_url?: { url?: string }; url?: string };
+            return imgUrl.image_url?.url || imgUrl.url || null;
+          }).filter(Boolean) as string[];
         }
 
-        const data = await response.json();
-        console.log("Image generation response received");
-
-        const choice = data.choices?.[0]?.message;
-        const textContent = choice?.content || "Here's your generated image:";
-        const images = choice?.images || [];
-        
-        const imageUrls = images.map((img: Record<string, unknown>) => {
-          if (typeof img === 'string') return img;
-          const imgUrl = img as { image_url?: { url?: string }; url?: string };
-          return imgUrl.image_url?.url || imgUrl.url || null;
-        }).filter(Boolean);
-        
         console.log("Extracted image URLs count:", imageUrls.length);
 
         return new Response(JSON.stringify({ 
