@@ -235,10 +235,17 @@ serve(async (req) => {
       }
     }
 
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not configured");
+    const AI_KEY = GEMINI_API_KEY || LOVABLE_API_KEY;
+    const AI_URL = GEMINI_API_KEY
+      ? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+      : "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const TEXT_MODEL = GEMINI_API_KEY ? "gemini-2.5-flash" : "google/gemini-3-flash-preview";
+    const IMAGE_MODEL = GEMINI_API_KEY ? "gemini-2.5-flash-image" : "google/gemini-3-pro-image-preview";
+
+    if (!AI_KEY) {
+      console.error("No AI key configured (GEMINI_API_KEY or LOVABLE_API_KEY)");
       throw new Error("AI service not configured");
     }
 
@@ -270,15 +277,15 @@ serve(async (req) => {
       const timeout = setTimeout(() => controller.abort(), 55000); // 55s timeout
       
       try {
-        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const response = await fetch(AI_URL, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            Authorization: `Bearer ${AI_KEY}`,
             "Content-Type": "application/json",
           },
           signal: controller.signal,
           body: JSON.stringify({
-            model: "google/gemini-3-pro-image-preview",
+            model: IMAGE_MODEL,
             messages: [
               { 
                 role: "system", 
@@ -348,14 +355,14 @@ serve(async (req) => {
     }
 
     // Regular text chat - streaming
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch(AI_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: TEXT_MODEL,
         messages: [
           { 
             role: "system", 
