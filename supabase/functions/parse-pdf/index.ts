@@ -70,6 +70,28 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const sb = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: authData, error: authErr } = await sb.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (authErr || !authData?.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 
@@ -80,7 +102,16 @@ serve(async (req) => {
       });
     }
 
-    console.log('Processing file:', file.name, 'Size:', file.size, 'Type:', file.type);
+    // File size limit: 20MB
+    const MAX_SIZE = 20 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      return new Response(JSON.stringify({ error: 'File too large (max 20MB)' }), {
+        status: 413,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Processing file, size:', file.size, 'type:', file.type);
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = new Uint8Array(arrayBuffer);

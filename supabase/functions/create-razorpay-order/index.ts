@@ -61,9 +61,13 @@ serve(async (req) => {
     }
 
     const trimmedEmail = email.trim().toLowerCase();
+    const maskEmail = (e: string) => {
+      const [l, d] = e.split('@');
+      return l && d ? `${l.substring(0, 2)}***@${d}` : '***';
+    };
 
     if (!EMAIL_REGEX.test(trimmedEmail)) {
-      console.log(`Invalid email format: ${trimmedEmail}`);
+      console.log('Invalid email format received');
       return new Response(
         JSON.stringify({ error: 'Invalid email format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -109,7 +113,7 @@ serve(async (req) => {
       // Return existing order if it's less than 30 minutes old
       const orderAge = now - new Date(existingOrder.created_at).getTime();
       if (orderAge < 30 * 60 * 1000 && !testMode) {
-        console.log(`Returning existing pending order for: ${trimmedEmail}`);
+        console.log(`Returning existing pending order for: ${maskEmail(trimmedEmail)}`);
         return new Response(
           JSON.stringify({
             orderId: existingOrder.razorpay_order_id,
@@ -130,7 +134,7 @@ serve(async (req) => {
     }
 
     // Create Razorpay order
-    console.log(`Creating order for ${trimmedEmail} with amount: ${amount} paise (testMode: ${testMode})`);
+    console.log(`Creating order for ${maskEmail(trimmedEmail)} with amount: ${amount} paise`);
     const orderData = {
       amount: amount,
       currency: 'INR',
@@ -159,7 +163,7 @@ serve(async (req) => {
     }
 
     const order = await razorpayResponse.json();
-    console.log('Razorpay order created:', order.id, 'for email:', trimmedEmail);
+    console.log('Razorpay order created for:', maskEmail(trimmedEmail));
 
     // Save order to database
     const { error: dbError } = await supabase.from('subscriptions').insert({

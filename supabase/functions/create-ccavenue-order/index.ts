@@ -174,7 +174,7 @@ serve(async (req) => {
       console.error('Database error:', dbError);
     }
 
-    console.log('CCAvenue order created:', orderId, 'for email:', trimmedEmail);
+    console.log('CCAvenue order created');
 
     // CCAvenue payment URL (use test or production URL)
     const ccavenueUrl = testMode 

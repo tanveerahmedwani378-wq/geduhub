@@ -72,24 +72,28 @@ serve(async (req) => {
 
     // Handle payment verification from frontend
     if (payload.razorpay_order_id && payload.razorpay_payment_id) {
-      console.log('Frontend verification request for order:', payload.razorpay_order_id);
-      
-      // If signature is provided, verify it
-      if (payload.razorpay_signature) {
-        const signaturePayload = `${payload.razorpay_order_id}|${payload.razorpay_payment_id}`;
-        const expectedSig = await hmacSha256(keySecret, signaturePayload);
+      console.log('Frontend verification request received');
 
-        if (expectedSig !== payload.razorpay_signature) {
-          console.error('Payment signature verification failed. Expected:', expectedSig, 'Got:', payload.razorpay_signature);
-          // Don't fail - UPI/Google Pay may have different signature handling
-          // Instead, we'll update the DB anyway since payment was successful
-          console.log('Proceeding with update despite signature mismatch (UPI/GPay handling)');
-        } else {
-          console.log('Payment signature verified successfully');
-        }
-      } else {
-        console.log('No signature provided - this is normal for UPI/Google Pay');
+      // ALWAYS require signature for frontend verification
+      if (!payload.razorpay_signature) {
+        console.error('Missing payment signature');
+        return new Response(
+          JSON.stringify({ error: 'Payment signature required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
+
+      const signaturePayload = `${payload.razorpay_order_id}|${payload.razorpay_payment_id}`;
+      const expectedSig = await hmacSha256(keySecret, signaturePayload);
+
+      if (expectedSig !== payload.razorpay_signature) {
+        console.error('Invalid payment signature - rejecting');
+        return new Response(
+          JSON.stringify({ error: 'Invalid payment signature' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.log('Payment signature verified successfully');
 
       // Update subscription status
       // Set expiration to 6 months from now
@@ -100,7 +104,7 @@ serve(async (req) => {
         .from('subscriptions')
         .update({
           razorpay_payment_id: payload.razorpay_payment_id,
-          razorpay_signature: payload.razorpay_signature || 'upi_payment',
+          razorpay_signature: payload.razorpay_signature,
           status: 'active',
           expires_at: expiresAt.toISOString(),
           updated_at: new Date().toISOString()
