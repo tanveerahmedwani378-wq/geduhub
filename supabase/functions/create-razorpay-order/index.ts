@@ -61,9 +61,13 @@ serve(async (req) => {
     }
 
     const trimmedEmail = email.trim().toLowerCase();
+    const maskEmail = (e: string) => {
+      const [l, d] = e.split('@');
+      return l && d ? `${l.substring(0, 2)}***@${d}` : '***';
+    };
 
     if (!EMAIL_REGEX.test(trimmedEmail)) {
-      console.log(`Invalid email format: ${trimmedEmail}`);
+      console.log('Invalid email format received');
       return new Response(
         JSON.stringify({ error: 'Invalid email format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
