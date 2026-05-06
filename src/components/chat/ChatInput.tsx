@@ -318,8 +318,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
       }
     };
   }, []);
@@ -331,14 +331,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
       case 'image':
         setInput('Generate an image of ');
         break;
-      // 'video' case removed — video generation disabled
       case 'analyze':
-        setInput('Analyze this image and describe what you see: ');
-        toast.info('Attach an image to analyze');
+        toast.info('Select an image to analyze');
+        fileInputRef.current?.click();
+        setInput(prev => prev || 'Analyze this image and describe what you see in detail: ');
         break;
       case 'thinking':
-        setInput('[Thinking mode] ');
-        toast.info('Deep thinking mode enabled');
+        setThinkingMode(!thinkingMode);
+        toast.success(thinkingMode ? 'Thinking mode off' : 'Thinking mode on — deeper reasoning');
         break;
       default:
         break;
