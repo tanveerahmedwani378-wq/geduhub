@@ -28,6 +28,10 @@ interface ChatContextType {
   userProfile: UserProfile;
   isRecording: boolean;
   setIsRecording: (value: boolean) => void;
+  speakNextResponse: boolean;
+  setSpeakNextResponse: (value: boolean) => void;
+  thinkingMode: boolean;
+  setThinkingMode: (value: boolean) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   updateMessage: (messageId: string, newContent: string) => void;
   editAndResend: (messageId: string, newContent: string) => string | null;
