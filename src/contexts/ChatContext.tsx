@@ -41,8 +41,15 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+    } catch {}
+  }, [conversations]);
+
   const [isRecording, setIsRecording] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({
     isPremium: true, // No free message limit - all users have full access
