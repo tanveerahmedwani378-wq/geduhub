@@ -229,7 +229,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, thinking: thinkingMode }),
       });
 
       if (!response.ok) {
@@ -342,7 +342,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, thinking: thinkingMode }),
       });
 
       if (!response.ok) {
@@ -437,7 +437,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, thinking: thinkingMode }),
       });
 
       if (!response.ok) {
