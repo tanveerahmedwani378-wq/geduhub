@@ -417,8 +417,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
               Analyze image
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleFeatureClick('thinking')}>
-              <Brain className="w-4 h-4 mr-2" />
-              Thinking
+              <Brain className={`w-4 h-4 mr-2 ${thinkingMode ? 'text-primary' : ''}`} />
+              Thinking {thinkingMode && '✓'}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled>
