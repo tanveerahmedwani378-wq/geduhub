@@ -1,5 +1,26 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Message, Conversation, UserProfile } from '@/types/chat';
+
+const STORAGE_KEY = 'geduhub_conversations_v1';
+
+const loadConversations = (): Conversation[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return parsed.map((c: any) => ({
+      ...c,
+      createdAt: new Date(c.createdAt),
+      updatedAt: new Date(c.updatedAt),
+      messages: (c.messages || []).map((m: any) => ({
+        ...m,
+        timestamp: new Date(m.timestamp),
+      })),
+    }));
+  } catch {
+    return [];
+  }
+};
 
 interface ChatContextType {
   conversations: Conversation[];
@@ -20,8 +41,15 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+    } catch {}
+  }, [conversations]);
+
   const [isRecording, setIsRecording] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({
     isPremium: true, // No free message limit - all users have full access
