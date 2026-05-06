@@ -85,33 +85,34 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       timestamp: new Date(),
     };
 
-    if (!currentConversation) {
-      const newConversation: Conversation = {
-        id: crypto.randomUUID(),
-        title: message.role === 'user' ? `${message.content.slice(0, 30)}...` : 'New Chat',
-        messages: [newMessage],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    setConversations(prev => {
+      const activeId = currentConversation?.id;
+      const active = activeId ? prev.find(c => c.id === activeId) : null;
 
-      setConversations(prev => [newConversation, ...prev]);
-      setCurrentConversation(newConversation);
-    } else {
-      const updatedConversation: Conversation = {
-        ...currentConversation,
-        messages: [...currentConversation.messages, newMessage],
+      if (!active) {
+        const newConversation: Conversation = {
+          id: crypto.randomUUID(),
+          title: message.role === 'user' ? `${message.content.slice(0, 30)}...` : 'New Chat',
+          messages: [newMessage],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        setCurrentConversation(newConversation);
+        return [newConversation, ...prev];
+      }
+
+      const updated: Conversation = {
+        ...active,
+        messages: [...active.messages, newMessage],
         title:
-          currentConversation.messages.length === 0 && message.role === 'user'
+          active.messages.length === 0 && message.role === 'user'
             ? `${message.content.slice(0, 30)}...`
-            : currentConversation.title,
+            : active.title,
         updatedAt: new Date(),
       };
-
-      setConversations(prev =>
-        prev.map(conv => (conv.id === currentConversation.id ? updatedConversation : conv))
-      );
-      setCurrentConversation(updatedConversation);
-    }
+      setCurrentConversation(updated);
+      return prev.map(c => (c.id === active.id ? updated : c));
+    });
 
     if (message.role === 'user') {
       setUserProfile(prev => ({
