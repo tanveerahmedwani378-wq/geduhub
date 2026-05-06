@@ -55,10 +55,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [conversations]);
 
   const [isRecording, setIsRecording] = useState(false);
+  const [speakNextResponse, setSpeakNextResponse] = useState(false);
+  const [thinkingMode, setThinkingMode] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    isPremium: true, // No free message limit - all users have full access
+    isPremium: true,
     messagesUsed: 0,
-    maxFreeMessages: 999999, // Effectively unlimited
+    maxFreeMessages: 999999,
   });
 
   const createConversation = () => {
