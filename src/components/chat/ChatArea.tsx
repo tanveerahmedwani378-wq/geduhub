@@ -17,11 +17,31 @@ interface ChatAreaProps {
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMessageConsumed }) => {
-  const { currentConversation, addMessage, userProfile, createConversation, removeLastAssistantMessage, editAndResend } = useChat();
+  const { currentConversation, addMessage, userProfile, createConversation, removeLastAssistantMessage, editAndResend, speakNextResponse, setSpeakNextResponse, thinkingMode } = useChat();
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialMessageSent = useRef(false);
+
+  const speakText = (text: string) => {
+    try {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      // Strip markdown for cleaner speech
+      const clean = text
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/[#*_`>]/g, '')
+        .replace(/!\[.*?\]\(.*?\)/g, '')
+        .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+        .slice(0, 1000);
+      const utter = new SpeechSynthesisUtterance(clean);
+      utter.lang = 'en-US';
+      utter.rate = 1;
+      window.speechSynthesis.speak(utter);
+    } catch (e) {
+      console.warn('TTS failed:', e);
+    }
+  };
 
   const addAssistantMessage = (content: string, images?: string[], videoUrl?: string) => {
     addMessage({
@@ -30,6 +50,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
       images,
       videoUrl,
     });
+    if (speakNextResponse) {
+      setSpeakNextResponse(false);
+      speakText(content);
+    }
   };
 
   const parseJsonPayload = async (response: Response) => {
