@@ -167,7 +167,7 @@ serve(async (req) => {
       });
     }
 
-    const { messages: rawMessages } = body as { messages: unknown };
+    const { messages: rawMessages, thinking } = body as { messages: unknown; thinking?: boolean };
 
     // Validate messages
     let messages: ValidatedMessage[];
