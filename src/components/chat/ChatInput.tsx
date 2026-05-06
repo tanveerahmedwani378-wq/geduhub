@@ -23,12 +23,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [fileContents, setFileContents] = useState<Map<string, string>>(new Map());
-  const { isRecording, setIsRecording } = useChat();
+  const { isRecording, setIsRecording, setSpeakNextResponse, thinkingMode, setThinkingMode } = useChat();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  // Voice recording refs
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -78,88 +76,75 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
   };
 
   const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
+    const SpeechRecognition: any =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(track => track.stop());
-        
-        if (audioChunksRef.current.length === 0) {
-          toast.error('No audio recorded');
-          return;
-        }
-
-        setIsTranscribing(true);
-        try {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          
-          // Convert to base64
-          const reader = new FileReader();
-          reader.readAsDataURL(audioBlob);
-          reader.onloadend = async () => {
-            const base64Audio = (reader.result as string).split(',')[1];
-            
-            // Send to edge function for transcription
-            const { data, error } = await supabase.functions.invoke('elevenlabs-scribe-token', {});
-            
-            if (error || !data?.token) {
-              throw new Error(error?.message || 'Failed to get transcription token');
-            }
-
-            // Use WebSocket for real-time transcription
-            const ws = new WebSocket(`wss://api.elevenlabs.io/v1/realtime_scribe?token=${data.token}`);
-            
-            ws.onopen = () => {
-              // Send audio config
-              ws.send(JSON.stringify({
-                type: 'config',
-                audio_format: 'pcm_16000',
-              }));
-              
-              // For now, just show a message that we got the token
-              // Full implementation would stream audio chunks
-              toast.success('Voice recording captured');
-              setInput(prev => prev + ' [Voice message - transcription in progress]');
-              setIsTranscribing(false);
-              ws.close();
-            };
-
-            ws.onerror = () => {
-              toast.error('Transcription failed');
-              setIsTranscribing(false);
-            };
-          };
-        } catch (error) {
-          console.error('Transcription error:', error);
-          toast.error('Failed to transcribe audio');
-          setIsTranscribing(false);
-        }
-      };
-
-      mediaRecorder.start(100);
-      setIsRecording(true);
-      toast.success('Recording started - speak now');
-    } catch (error) {
-      console.error('Failed to start recording:', error);
-      toast.error('Could not access microphone');
+    if (!SpeechRecognition) {
+      toast.error('Voice input not supported in this browser. Try Chrome.');
+      return;
     }
-  }, [setIsRecording]);
+
+    try {
+      // Request mic permission first
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      toast.error('Microphone permission denied');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    let finalText = '';
+
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += transcript;
+        else interim += transcript;
+      }
+      setInput(finalText + interim);
+    };
+
+    recognition.onerror = (e: any) => {
+      console.error('Speech recognition error:', e.error);
+      if (e.error !== 'no-speech' && e.error !== 'aborted') {
+        toast.error(`Voice error: ${e.error}`);
+      }
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      const text = finalText.trim();
+      if (text) {
+        // Mark that the next AI response should be spoken aloud
+        setSpeakNextResponse(true);
+        // Auto-send
+        onSend(text);
+        setInput('');
+      }
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+      setIsRecording(true);
+      toast.success('Listening... speak now');
+    } catch (err) {
+      console.error('Failed to start recognition:', err);
+      toast.error('Could not start voice input');
+    }
+  }, [setIsRecording, setSpeakNextResponse, onSend]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
     }
     setIsRecording(false);
-    toast.info('Recording stopped');
   }, [setIsRecording]);
 
   const toggleRecording = () => {
@@ -333,8 +318,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
       }
     };
   }, []);
@@ -346,14 +331,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
       case 'image':
         setInput('Generate an image of ');
         break;
-      // 'video' case removed — video generation disabled
       case 'analyze':
-        setInput('Analyze this image and describe what you see: ');
-        toast.info('Attach an image to analyze');
+        toast.info('Select an image to analyze');
+        fileInputRef.current?.click();
+        setInput(prev => prev || 'Analyze this image and describe what you see in detail: ');
         break;
       case 'thinking':
-        setInput('[Thinking mode] ');
-        toast.info('Deep thinking mode enabled');
+        setThinkingMode(!thinkingMode);
+        toast.success(thinkingMode ? 'Thinking mode off' : 'Thinking mode on — deeper reasoning');
         break;
       default:
         break;
@@ -432,8 +417,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
               Analyze image
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleFeatureClick('thinking')}>
-              <Brain className="w-4 h-4 mr-2" />
-              Thinking
+              <Brain className={`w-4 h-4 mr-2 ${thinkingMode ? 'text-primary' : ''}`} />
+              Thinking {thinkingMode && '✓'}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled>

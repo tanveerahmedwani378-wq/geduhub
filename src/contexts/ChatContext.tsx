@@ -28,6 +28,10 @@ interface ChatContextType {
   userProfile: UserProfile;
   isRecording: boolean;
   setIsRecording: (value: boolean) => void;
+  speakNextResponse: boolean;
+  setSpeakNextResponse: (value: boolean) => void;
+  thinkingMode: boolean;
+  setThinkingMode: (value: boolean) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   updateMessage: (messageId: string, newContent: string) => void;
   editAndResend: (messageId: string, newContent: string) => string | null;
@@ -51,10 +55,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [conversations]);
 
   const [isRecording, setIsRecording] = useState(false);
+  const [speakNextResponse, setSpeakNextResponse] = useState(false);
+  const [thinkingMode, setThinkingMode] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    isPremium: true, // No free message limit - all users have full access
+    isPremium: true,
     messagesUsed: 0,
-    maxFreeMessages: 999999, // Effectively unlimited
+    maxFreeMessages: 999999,
   });
 
   const createConversation = () => {
@@ -229,6 +235,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         userProfile,
         isRecording,
         setIsRecording,
+        speakNextResponse,
+        setSpeakNextResponse,
+        thinkingMode,
+        setThinkingMode,
         addMessage,
         updateMessage,
         editAndResend,
