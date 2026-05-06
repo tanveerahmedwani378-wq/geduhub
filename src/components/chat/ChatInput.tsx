@@ -23,12 +23,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [fileContents, setFileContents] = useState<Map<string, string>>(new Map());
-  const { isRecording, setIsRecording } = useChat();
+  const { isRecording, setIsRecording, setSpeakNextResponse, thinkingMode, setThinkingMode } = useChat();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  // Voice recording refs
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
