@@ -58,6 +58,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
 
   const createConversation = () => {
+    // If there's already an empty chat, reuse it instead of creating another
+    const existingEmpty = conversations.find(c => c.messages.length === 0);
+    if (existingEmpty) {
+      setCurrentConversation(existingEmpty);
+      return;
+    }
+    if (currentConversation && currentConversation.messages.length === 0) {
+      return;
+    }
     const newConversation: Conversation = {
       id: crypto.randomUUID(),
       title: 'New Chat',
