@@ -75,23 +75,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
     }
   };
 
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(() => {
     const SpeechRecognition: any =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      toast.error('Voice input not supported in this browser. Try Chrome.');
+      toast.error('Voice input not supported in this browser. Try Chrome or Edge.');
       return;
     }
 
-    try {
-      // Request mic permission first
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      toast.error('Microphone permission denied');
-      return;
-    }
-
+    // IMPORTANT: must call recognition.start() synchronously inside the user gesture.
+    // Do NOT await getUserMedia first — the browser will prompt for mic itself.
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
@@ -111,7 +105,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
 
     recognition.onerror = (e: any) => {
       console.error('Speech recognition error:', e.error);
-      if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        toast.error('Microphone blocked. Allow mic access in your browser settings.');
+      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
         toast.error(`Voice error: ${e.error}`);
       }
       setIsRecording(false);
