@@ -105,7 +105,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, isLoadin
 
     recognition.onerror = (e: any) => {
       console.error('Speech recognition error:', e.error);
-      if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        toast.error('Microphone blocked. Allow mic access in your browser settings.');
+      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
         toast.error(`Voice error: ${e.error}`);
       }
       setIsRecording(false);
