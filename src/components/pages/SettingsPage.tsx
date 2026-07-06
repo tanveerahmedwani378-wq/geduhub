@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { PaymentGate } from '@/components/PaymentGate';
 import { toast } from 'sonner';
+import { AdSlot } from '@/components/AdSlot';
 
 export const SettingsPage: React.FC = () => {
   const { userProfile } = useChat();
