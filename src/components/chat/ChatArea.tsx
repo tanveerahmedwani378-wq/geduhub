@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { create3DVideoFromImage } from '@/lib/video3d';
 import geduhubChatLogo from '@/assets/geduhub-chat-logo.png';
+import { AdSlot } from '@/components/AdSlot';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
@@ -555,6 +556,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
               </div>
             ))}
           </div>
+        </div>
+        <div className="max-w-4xl w-full mx-auto px-4">
+          <AdSlot slot="1234567890" />
         </div>
         <ChatInput onSend={handleSend} disabled={needsPremium} isLoading={isLoading} />
       </div>

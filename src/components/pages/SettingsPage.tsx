@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { PaymentGate } from '@/components/PaymentGate';
 import { toast } from 'sonner';
+import { AdSlot } from '@/components/AdSlot';
 
 export const SettingsPage: React.FC = () => {
   const { userProfile } = useChat();
@@ -151,6 +152,12 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Ad slot for free users */}
+        <div className="mb-8">
+          <AdSlot slot="1234567890" />
+        </div>
+
 
         {/* Preferences */}
         <div className="p-6 rounded-xl bg-secondary/30 border border-border">
