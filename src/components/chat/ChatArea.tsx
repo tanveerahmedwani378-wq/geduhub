@@ -557,6 +557,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ initialMessage, onInitialMes
             ))}
           </div>
         </div>
+        <div className="max-w-4xl w-full mx-auto px-4">
+          <AdSlot slot="1234567890" />
+        </div>
         <ChatInput onSend={handleSend} disabled={needsPremium} isLoading={isLoading} />
       </div>
     );
