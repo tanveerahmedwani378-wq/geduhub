@@ -147,16 +147,17 @@ export const SettingsPage: React.FC = () => {
                       width: `${Math.min((userProfile.messagesUsed / userProfile.maxFreeMessages) * 100, 100)}%`,
                     }}
                   />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Ad slot for free users */}
         <div className="mb-8">
           <AdSlot slot="1234567890" />
         </div>
-              )}
-            </div>
-          </div>
-        </div>
+
 
         {/* Preferences */}
         <div className="p-6 rounded-xl bg-secondary/30 border border-border">
